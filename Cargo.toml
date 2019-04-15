@@ -1,0 +1,11 @@
+[package]
+name = "bls2brs"
+version = "0.1.0"
+authors = ["ns <portification@gmail.com>"]
+edition = "2018"
+
+[dependencies]
+lazy_static = "1"
+regex = "1"
+bl_save = "0.1"
+brs = { path = "../brs" }
