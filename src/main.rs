@@ -50,14 +50,24 @@ fn convert_one(input_path: impl AsRef<Path>, output_path: impl AsRef<Path>) {
         converted.write_data.description.insert_str(0, &prefix);
     }
 
-    println!("Unknown UI names:");
-    let mut ui_names: Vec<_> = converted.unknown_ui_names.into_iter().collect();
-    ui_names.sort_by(|(_, ac), (_, bc)| ac.cmp(bc).reverse());
-    for (ui_name, count) in ui_names {
-        println!("    {:<25} {} bricks", ui_name, count);
+    if !converted.unknown_ui_names.is_empty() {
+        println!("Unknown bricks:");
+        let mut ui_names: Vec<_> = converted.unknown_ui_names.into_iter().collect();
+        ui_names.sort_by(|(_, ac), (_, bc)| ac.cmp(bc).reverse());
+        for (ui_name, count) in ui_names {
+            let ui_name = if ui_name.ends_with(" ") {
+                format!("{:?}", ui_name)
+            } else {
+                ui_name
+            };
+            println!("  {:<28} {:>4} bricks", ui_name, count);
+        }
     }
 
-    println!("{} bricks failed to convert", converted.count_failure);
+    if converted.count_failure > 0 {
+        println!("{} bricks failed to convert", converted.count_failure);
+    }
+
     println!(
         "{} of {} bricks converted successfully to {} bricks",
         converted.count_success,

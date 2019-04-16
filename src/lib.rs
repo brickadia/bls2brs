@@ -1,14 +1,20 @@
 use brs::{chrono::prelude::*, uuid::Uuid};
-use lazy_static::lazy_static;
-use regex::{Captures, Regex};
 use std::{
-    collections::{HashMap, HashSet},
+    collections::HashMap,
     io::{self, prelude::*},
     ops::Neg,
 };
 
 pub use bl_save;
 pub use brs;
+
+mod types;
+#[macro_use]
+mod misc;
+mod mappings;
+
+use mappings::{BRICK_MAP_LITERAL, BRICK_MAP_REGEX};
+use types::{BrickDesc, BrickMapping};
 
 // Keep this in sync. Would be nice to just determine the indices at compile time.
 const FIXED_MATERIAL_TABLE: &[&str] = &["BMC_Plastic", "BMC_Glow", "BMC_Metallic"];
@@ -17,254 +23,6 @@ const BMC_GLOW: usize = 1;
 const BMC_METALLIC: usize = 2;
 
 const BRICK_OWNER: usize = 0;
-
-macro_rules! map {
-    [$($key:expr => $value:expr),* $(,)?] => {
-        vec![
-            $(
-                ($key, $value),
-            )*
-        ].into_iter().collect()
-    }
-}
-
-macro_rules! brick_map_literal {
-    [$($ui:expr => $map:expr),* $(,)?] => {
-        map![
-            $($ui => AsBrickMappingVec::as_brick_mapping_vec($map),)*
-        ]
-    }
-}
-
-macro_rules! brick_map_regex {
-    [$($source:expr => $func:expr),* $(,)?] => {
-        vec![
-            $(
-                (
-                    Regex::new($source).expect("failed to compile regex"),
-                    Box::new($func),
-                ),
-            )*
-        ]
-    }
-}
-
-type RegexHandler =
-    Box<dyn Fn(Captures, &bl_save::Brick) -> Option<Vec<BrickMapping<'static>>> + Sync>;
-
-lazy_static! {
-    static ref BLANK_PRINTS: HashSet<&'static str> = vec![
-        "Letters/-space",
-        "1x2f/blank",
-        "2x2f/blank",
-    ].into_iter().collect();
-
-    static ref BRICK_ROAD_LANE: BrickMapping<'static> = BrickMapping::new("PB_DefaultTile")
-        .color_override(brs::Color::from_rgba(51, 51, 51, 255));
-    static ref BRICK_ROAD_STRIPE: BrickMapping<'static> = BrickMapping::new("PB_DefaultTile")
-        .color_override(brs::Color::from_rgba(254, 254, 232, 255));
-
-    static ref BRICK_MAP_LITERAL: HashMap<&'static str, Vec<BrickMapping<'static>>> = brick_map_literal![
-        "1x1 Cone" => BrickMapping::new("B_1x1_Cone"),
-        "1x1 Round" => BrickMapping::new("B_1x1_Round"),
-        "1x1F Round" => BrickMapping::new("B_1x1F_Round"),
-        "2x2 Round" => BrickMapping::new("B_2x2_Round"),
-        "2x2F Round" => BrickMapping::new("B_2x2F_Round"),
-        "Pine Tree" => BrickMapping::new("B_Pine_Tree").offset((0, 0, -6)),
-
-        // "1x4x5 Window" => BrickMapping::new("PB_DefaultBrick").size((4*5, 1*5, 5*6)),
-        "Music Brick" => BrickMapping::new("PB_DefaultBrick").size((5, 5, 6)),
-        "2x2 Disc" => BrickMapping::new("B_2x2F_Round"),
-
-        "32x32 Road" => vec![
-            // left and right sidewalks
-            BrickMapping::new("PB_DefaultBrick").size((9*5, 32*5, 2)).offset((0, -115, 0)),
-            BrickMapping::new("PB_DefaultBrick").size((9*5, 32*5, 2)).offset((0, 115, 0)),
-            // left and right stripes
-            BRICK_ROAD_STRIPE.clone().size((1*5, 32*5, 2)).offset((0, -65, 0)),
-            BRICK_ROAD_STRIPE.clone().size((1*5, 32*5, 2)).offset((0, 65, 0)),
-            // lanes
-            BRICK_ROAD_LANE.clone().size((6*5, 32*5, 2)).offset((0, -6*5, 0)),
-            BRICK_ROAD_LANE.clone().size((6*5, 32*5, 2)).offset((0, 6*5, 0)),
-        ],
-
-        // Orientations are relative to this camera position on Beta City:
-        // 39.5712 0.0598862 14.5026 0.999998 -0.0007625 0.00180403 0.799784
-        "32x32 Road T" => vec![
-            BrickMapping::new("PB_DefaultBrick").size((9*5, 32*5, 2)).offset((0, -115, 0)), // top
-            BrickMapping::new("PB_DefaultBrick").size((9*5, 9*5, 2)).offset((-115, 115, 0)), // bottom left
-            BrickMapping::new("PB_DefaultBrick").size((9*5, 9*5, 2)).offset((115, 115, 0)), // bottom right
-            BRICK_ROAD_STRIPE.clone().size((1*5, 32*5, 2)).offset((0, -65, 0)), // straight top
-            BRICK_ROAD_STRIPE.clone().size((1*5, 32*5, 2)).offset((0, 65, 0)), // straight bottom
-            BRICK_ROAD_STRIPE.clone().size((1*5, 9*5, 2)).rotation_offset(0).offset((-13*5, 23*5, 0)), // bottom left
-            BRICK_ROAD_STRIPE.clone().size((1*5, 9*5, 2)).rotation_offset(0).offset((13*5, 23*5, 0)), // bottom right
-            BRICK_ROAD_LANE.clone().size((6*5, 32*5, 2)).offset((0, -6*5, 0)), // straight top
-            BRICK_ROAD_LANE.clone().size((6*5, 32*5, 2)).offset((0, 6*5, 0)), // straight bottom
-            BRICK_ROAD_LANE.clone().size((6*5, 9*5, 2)).rotation_offset(0).offset((-6*5, 23*5, 0)), // bottom left
-            BRICK_ROAD_LANE.clone().size((6*5, 9*5, 2)).rotation_offset(0).offset((6*5, 23*5, 0)), // bottom right
-        ],
-
-        // Orientations are relative to this camera position on Beta City:
-        // -56.5 -35 4 0 0 1 3.14159
-        "32x32 Road X" => vec![
-            BrickMapping::new("PB_DefaultBrick").size((9*5, 9*5, 2)).offset((-23*5, -23*5, 0)), // top left
-            BrickMapping::new("PB_DefaultBrick").size((9*5, 9*5, 2)).offset((23*5, -23*5, 0)), // top right
-            BrickMapping::new("PB_DefaultBrick").size((9*5, 9*5, 2)).offset((-23*5, 23*5, 0)), // bottom left
-            BrickMapping::new("PB_DefaultBrick").size((9*5, 9*5, 2)).offset((23*5, 23*5, 0)), // bottom right
-            BRICK_ROAD_STRIPE.clone().size((1*5, 1*5, 2)).offset((13*5, -13*5, 0)), // corner top left
-            BRICK_ROAD_STRIPE.clone().size((1*5, 1*5, 2)).offset((13*5, 13*5, 0)), // corner right right
-            BRICK_ROAD_STRIPE.clone().size((1*5, 1*5, 2)).offset((-13*5, -13*5, 0)), // corner bottom left
-            BRICK_ROAD_STRIPE.clone().size((1*5, 1*5, 2)).offset((-13*5, 13*5, 0)), // corner bottom right
-            BRICK_ROAD_STRIPE.clone().size((1*5, 12*5, 2)).rotation_offset(0).offset((-13*5, 0, 0)), // inner bottom
-            BRICK_ROAD_STRIPE.clone().size((1*5, 12*5, 2)).rotation_offset(0).offset((13*5, 0, 0)), // inner top
-            BRICK_ROAD_STRIPE.clone().size((1*5, 12*5, 2)).offset((0, -13*5, 0)), // inner left
-            BRICK_ROAD_STRIPE.clone().size((1*5, 12*5, 2)).offset((0, 13*5, 0)), // inner right
-            BRICK_ROAD_STRIPE.clone().size((1*5, 9*5, 2)).rotation_offset(0).offset((-13*5, 23*5, 0)), // right bottom
-            BRICK_ROAD_STRIPE.clone().size((1*5, 9*5, 2)).rotation_offset(0).offset((13*5, 23*5, 0)), // right top
-            BRICK_ROAD_STRIPE.clone().size((1*5, 9*5, 2)).rotation_offset(0).offset((-13*5, -23*5, 0)), // left bottom
-            BRICK_ROAD_STRIPE.clone().size((1*5, 9*5, 2)).rotation_offset(0).offset((13*5, -23*5, 0)), // left top
-            BRICK_ROAD_STRIPE.clone().size((1*5, 9*5, 2)).offset((-23*5, -13*5, 0)), // bottom left
-            BRICK_ROAD_STRIPE.clone().size((1*5, 9*5, 2)).offset((-23*5, 13*5, 0)), // bottom right
-            BRICK_ROAD_STRIPE.clone().size((1*5, 9*5, 2)).offset((23*5, -13*5, 0)), // top left
-            BRICK_ROAD_STRIPE.clone().size((1*5, 9*5, 2)).offset((23*5, 13*5, 0)), // top right
-            BRICK_ROAD_LANE.clone().size((6*5, 6*5, 2)).offset((-6*5, -6*5, 0)), // inner bottom left
-            BRICK_ROAD_LANE.clone().size((6*5, 6*5, 2)).offset((-6*5, 6*5, 0)), // inner bottom right
-            BRICK_ROAD_LANE.clone().size((6*5, 6*5, 2)).offset((6*5, -6*5, 0)), // inner top left
-            BRICK_ROAD_LANE.clone().size((6*5, 6*5, 2)).offset((6*5, 6*5, 0)), // inner top right
-            BRICK_ROAD_LANE.clone().size((6*5, 9*5, 2)).rotation_offset(0).offset((-6*5, 23*5, 0)), // right bottom
-            BRICK_ROAD_LANE.clone().size((6*5, 9*5, 2)).rotation_offset(0).offset((6*5, 23*5, 0)), // right top
-            BRICK_ROAD_LANE.clone().size((6*5, 9*5, 2)).rotation_offset(0).offset((-6*5, -23*5, 0)), // left bottom
-            BRICK_ROAD_LANE.clone().size((6*5, 9*5, 2)).rotation_offset(0).offset((6*5, -23*5, 0)), // left top
-            BRICK_ROAD_LANE.clone().size((6*5, 9*5, 2)).offset((-23*5, -6*5, 0)), // bottom left
-            BRICK_ROAD_LANE.clone().size((6*5, 9*5, 2)).offset((-23*5, 6*5, 0)), // bottom right
-            BRICK_ROAD_LANE.clone().size((6*5, 9*5, 2)).offset((23*5, -6*5, 0)), // top left
-            BRICK_ROAD_LANE.clone().size((6*5, 9*5, 2)).offset((23*5, 6*5, 0)), // top right
-        ],
-
-        // Orientations are relative to this camera position on Beta City:
-        // -25.9168 -110.523 12.5993 0.996034 0.0289472 -0.0841301 0.665224
-        "32x32 Road C" => vec![
-            // sidewalks
-            BrickMapping::new("PB_DefaultBrick").size((9*5, 9*5, 2)).offset((-115, 115, 0)), // top left
-            BrickMapping::new("PB_DefaultBrick").size((9*5, 9*5, 2)).offset((115, -115, 0)), // bottom right
-            BrickMapping::new("PB_DefaultBrick").size((9*5, 23*5, 2)).rotation_offset(0).offset((115, 45, 0)), // bottom left
-            BrickMapping::new("PB_DefaultBrick").size((9*5, 23*5, 2)).offset((-45, -115, 0)), // top right
-            BRICK_ROAD_STRIPE.clone().size((1*5, 9*5, 2)).offset((-115, 65, 0)), // inner right
-            BRICK_ROAD_STRIPE.clone().size((1*5, 9*5, 2)).rotation_offset(0).offset((-65, 115, 0)), // inner bottom
-            BRICK_ROAD_STRIPE.clone().size((1*5, 22*5, 2)).offset((-50, -65, 0)), // top right
-            BRICK_ROAD_STRIPE.clone().size((1*5, 22*5, 2)).rotation_offset(0).offset((65, 50, 0)), // bottom left
-            BRICK_ROAD_STRIPE.clone().size((1*5, 1*5, 2)).offset((65, -65, 0)), // bottom right
-            BRICK_ROAD_STRIPE.clone().size((1*5, 1*5, 2)).rotation_offset(0).offset((-65, 65, 0)), // inner bottom right
-            BRICK_ROAD_LANE.clone().size((6*5, 10*5, 2)).offset((-22*5, 6*5, 0)), // top left
-            BRICK_ROAD_LANE.clone().size((6*5, 16*5, 2)).offset((-16*5, -6*5, 0)), // top right
-            BRICK_ROAD_LANE.clone().size((6*5, 16*5, 2)).rotation_offset(0).offset((6*5, 16*5, 0)), // bottom left
-            BRICK_ROAD_LANE.clone().size((6*5, 10*5, 2)).rotation_offset(0).offset((-6*5, 22*5, 0)), // left top
-            BRICK_ROAD_LANE.clone().size((6*5, 6*5, 2)).offset((-6*5, 6*5, 0)), // inner top left
-            BRICK_ROAD_LANE.clone().size((6*5, 6*5, 2)).offset((6*5, -6*5, 0)), // inner bottom right
-        ],
-    ];
-
-    static ref BRICK_MAP_REGEX: Vec<(Regex, RegexHandler)> = brick_map_regex![
-        // TODO: Consider trying to handle fractional sizes that sometimes occur
-        // TODO: Remove (?: Print)? when prints exist
-        r"^(\d+)x(\d+)(?:x(\d+)|([Ff])|([Hh]))?( Print)?$" => |captures, from| {
-            let width: u32 = captures.get(1).unwrap().as_str().parse().ok()?;
-            let length: u32 = captures.get(2).unwrap().as_str().parse().ok()?;
-            let z: u32 = if captures.get(4).is_some() { // F
-                2
-            } else if captures.get(5).is_some() { // H
-                4
-            } else { // x(Z)
-                captures
-                    .get(3)
-                    .map(|g| g.as_str().parse::<u32>().ok())
-                    .unwrap_or(Some(1))?
-                    * 6
-            };
-
-            let print = captures.get(6).is_some();
-            let asset = if print && BLANK_PRINTS.contains(from.base.print.as_str()) {
-                "PB_DefaultTile"
-            } else {
-                "PB_DefaultBrick"
-            };
-            let rotation_offset = if print { 0 } else { 1 };
-
-            Some(vec![BrickMapping::new(asset)
-                .size((width * 5, length * 5, z))
-                .rotation_offset(rotation_offset)])
-        },
-
-        // TODO: Remove (?: Print)? when prints exist
-        r"^(-)?(25|45|72|80)° (Inv )?Ramp(?: (\d+)x)?( Corner)?(?: Print)?$" => |captures, _| {
-            let neg = captures.get(1).is_some();
-            let inv = captures.get(3).is_some();
-            let corner = captures.get(5).is_some();
-
-            if inv && !corner {
-                return None;
-            }
-
-            let asset = if neg {
-                if inv {
-                    "PB_DefaultRampInnerCornerInverted"
-                } else if corner {
-                    "PB_DefaultRampCornerInverted"
-                } else {
-                    "PB_DefaultRampInverted"
-                }
-            } else if inv {
-                "PB_DefaultRampInnerCorner"
-            } else if corner {
-                "PB_DefaultRampCorner"
-            } else {
-                "PB_DefaultRamp"
-            };
-
-            let degree_str = captures.get(2).unwrap().as_str();
-
-            let (x, z) = if degree_str == "25" {
-                (15, 6)
-            } else if degree_str == "45" {
-                (10, 6)
-            } else if degree_str == "72" {
-                (10, 18)
-            } else if degree_str == "80" {
-                (10, 30)
-            } else {
-                return None;
-            };
-
-            let mut y = x;
-
-            if let Some(group) = captures.get(4) {
-                if corner {
-                    return None;
-                }
-
-                let length: u32 = group.as_str().parse().ok()?;
-                y = length * 5;
-            }
-
-            Some(vec![BrickMapping::new(asset).size((x, y, z)).rotation_offset(0)])
-        },
-
-        r"^(\d+)x(\d+)F Tile$" => |captures, _| {
-            let width: u32 = captures.get(1).unwrap().as_str().parse().ok()?;
-            let length: u32 = captures.get(2).unwrap().as_str().parse().ok()?;
-            Some(vec![BrickMapping::new("PB_DefaultTile").size((width * 5, length * 5, 2))])
-        },
-        r"^(\d+)x(\d+) Base$" => |captures, _| {
-            let width: u32 = captures.get(1).unwrap().as_str().parse().ok()?;
-            let length: u32 = captures.get(2).unwrap().as_str().parse().ok()?;
-            Some(vec![BrickMapping::new("PB_DefaultBrick").size((width * 5, length * 5, 2))])
-        },
-        r"^(\d+)x Cube$" => |captures, _| {
-            let size: u32 = captures.get(1).unwrap().as_str().parse().ok()?;
-            Some(vec![BrickMapping::new("PB_DefaultBrick").size((size * 5, size * 5, size * 5))])
-        },
-    ];
-}
 
 pub struct ConvertReport {
     pub write_data: brs::WriteData,
@@ -320,7 +78,7 @@ pub fn convert(reader: bl_save::Reader<impl BufRead>) -> io::Result<ConvertRepor
             }
         };
 
-        for BrickMapping {
+        for BrickDesc {
             asset,
             size,
             offset,
@@ -347,7 +105,7 @@ pub fn convert(reader: bl_save::Reader<impl BufRead>) -> io::Result<ConvertRepor
             };
 
             let color_index = match color_override {
-                Some(ref color) => converter.color(color) as u32,
+                Some(color) => converter.color(color) as u32,
                 None => u32::from(from.base.color_index),
             };
 
@@ -383,7 +141,7 @@ struct Converter {
 }
 
 impl Converter {
-    fn map_brick(&mut self, from: &bl_save::Brick) -> Option<Vec<BrickMapping<'static>>> {
+    fn map_brick(&mut self, from: &bl_save::Brick) -> Option<BrickMapping> {
         let mapping = map_brick(from);
 
         if cfg!(debug_assertions) {
@@ -412,10 +170,10 @@ impl Converter {
         index
     }
 
-    fn color(&mut self, color: &brs::Color) -> usize {
+    fn color(&mut self, color: brs::Color) -> usize {
         // TODO: Optimize lookup with a map
         for (index, other) in self.write_data.colors.iter().enumerate() {
-            if other == color {
+            if *other == color {
                 return index;
             }
         }
@@ -426,7 +184,7 @@ impl Converter {
     }
 }
 
-fn map_brick(from: &bl_save::Brick) -> Option<Vec<BrickMapping<'static>>> {
+fn map_brick(from: &bl_save::Brick) -> Option<BrickMapping> {
     let ui_name = from.base.ui_name.as_str();
 
     if let Some(mapping) = BRICK_MAP_LITERAL.get(ui_name) {
@@ -440,63 +198,6 @@ fn map_brick(from: &bl_save::Brick) -> Option<Vec<BrickMapping<'static>>> {
     }
 
     None
-}
-
-#[derive(Debug, Clone)]
-struct BrickMapping<'s> {
-    asset: &'s str,
-    size: (u32, u32, u32),
-    offset: (i32, i32, i32),
-    rotation_offset: u8,
-    color_override: Option<brs::Color>,
-}
-
-impl<'s> BrickMapping<'s> {
-    const fn new(asset: &'s str) -> Self {
-        Self {
-            asset,
-            size: (0, 0, 0),
-            offset: (0, 0, 0),
-            rotation_offset: 1,
-            color_override: None,
-        }
-    }
-
-    fn size(mut self, size: (u32, u32, u32)) -> Self {
-        self.size = size;
-        self
-    }
-
-    fn offset(mut self, offset: (i32, i32, i32)) -> Self {
-        self.offset = offset;
-        self
-    }
-
-    fn rotation_offset(mut self, rotation: u8) -> Self {
-        self.rotation_offset = rotation;
-        self
-    }
-
-    fn color_override(mut self, color_override: brs::Color) -> Self {
-        self.color_override = Some(color_override);
-        self
-    }
-}
-
-trait AsBrickMappingVec<'s> {
-    fn as_brick_mapping_vec(self) -> Vec<BrickMapping<'s>>;
-}
-
-impl<'s> AsBrickMappingVec<'s> for BrickMapping<'s> {
-    fn as_brick_mapping_vec(self) -> Vec<BrickMapping<'s>> {
-        vec![self]
-    }
-}
-
-impl<'s> AsBrickMappingVec<'s> for Vec<BrickMapping<'s>> {
-    fn as_brick_mapping_vec(self) -> Vec<BrickMapping<'s>> {
-        self
-    }
 }
 
 fn map_color((r, g, b, a): (f32, f32, f32, f32)) -> brs::Color {
