@@ -15,145 +15,143 @@ const BMC_METALLIC: usize = 2;
 
 const BRICK_OWNER: usize = 0;
 
-macro_rules! new_regex {
-    ($e:expr) => {
-        Regex::new($e).expect("failed to compile regex")
-    };
+macro_rules! brick_map_literal {
+    [$($ui:expr => $map:expr),* $(,)?] => {
+        vec![
+            $(
+                ($ui, $map),
+            )*
+        ].into_iter().collect()
+    }
+}
+
+macro_rules! brick_map_regex {
+    [$($source:expr => $func:expr),* $(,)?] => {
+        vec![
+            $(
+                (
+                    Regex::new($source).expect("failed to compile regex"),
+                    Box::new($func),
+                ),
+            )*
+        ]
+    }
 }
 
 lazy_static! {
-    static ref BRICK_MAP_LITERAL: HashMap<&'static str, BrickMapping<'static>> = vec![
-        ("1x1 Cone", BrickMapping::new("B_1x1_Cone")),
-        ("1x1 Round", BrickMapping::new("B_1x1_Round")),
-        ("1x1F Round", BrickMapping::new("B_1x1F_Round")),
-        ("2x2 Round", BrickMapping::new("B_2x2_Round")),
-        ("2x2F Round", BrickMapping::new("B_2x2F_Round")),
-        (
-            "Pine Tree",
-            BrickMapping::with_offset("B_Pine_Tree", (0, 0, -6))
-        ),
-        ("32x32 Road", BrickMapping::with_size("PB_DefaultBrick", (160, 160, 2))),
-        ("32x32 Road X", BrickMapping::with_size("PB_DefaultBrick", (160, 160, 2))),
-        ("32x32 Road T", BrickMapping::with_size("PB_DefaultBrick", (160, 160, 2))),
-        // ("1x4x5 Window", BrickMapping::with_size("PB_DefaultBrick", (4*5, 1*5, 5*6))),
-        ("Music Brick", BrickMapping::with_size("PB_DefaultBrick", (5, 5, 6))),
-    ]
-    .into_iter()
-    .collect();
+    static ref BRICK_MAP_LITERAL: HashMap<&'static str, BrickMapping<'static>> = brick_map_literal![
+        "1x1 Cone" => BrickMapping::new("B_1x1_Cone"),
+        "1x1 Round" => BrickMapping::new("B_1x1_Round"),
+        "1x1F Round" => BrickMapping::new("B_1x1F_Round"),
+        "2x2 Round" => BrickMapping::new("B_2x2_Round"),
+        "2x2F Round" => BrickMapping::new("B_2x2F_Round"),
+        "Pine Tree" => BrickMapping::with_offset("B_Pine_Tree", (0, 0, -6)),
+        "32x32 Road" => BrickMapping::with_size("PB_DefaultBrick", (160, 160, 2)),
+        "32x32 Road X" => BrickMapping::with_size("PB_DefaultBrick", (160, 160, 2)),
+        "32x32 Road T" => BrickMapping::with_size("PB_DefaultBrick", (160, 160, 2)),
+        // "1x4x5 Window" => BrickMapping::with_size("PB_DefaultBrick", (4*5, 1*5, 5*6)),
+        "Music Brick" => BrickMapping::with_size("PB_DefaultBrick", (5, 5, 6)),
+    ];
+
     static ref BRICK_MAP_REGEX: Vec<(
         Regex,
         Box<dyn Fn(Captures) -> Option<BrickMapping<'static>> + Sync>
-    )> = vec![
-        (
-            // TODO: Consider trying to handle fractional sizes that sometimes occur
-            // TODO: Remove (?: Print)? when prints exist
-            new_regex!(r"^(\d+)x(\d+)(?:x(\d+)|(F))?(?: Print)?$"),
-            Box::new(|captures| {
-                let width: u32 = captures.get(1).unwrap().as_str().parse().ok()?;
-                let length: u32 = captures.get(2).unwrap().as_str().parse().ok()?;
-                let z: u32 = if captures.get(4).is_some() { // F
-                    2
-                } else { // x(Z)
-                    captures
-                        .get(3)
-                        .map(|g| g.as_str().parse::<u32>().ok())
-                        .unwrap_or(Some(1))?
-                        * 6
-                };
-                Some(BrickMapping::with_size(
-                    "PB_DefaultBrick",
-                    (width * 5, length * 5, z),
-                ))
-            })
-        ),
-        (
-            // TODO: Remove (?: Print)? when prints exist
-            new_regex!(r"^(-)?(25|45|72|80)° (Inv )?Ramp(?: (\d+)x)?( Corner)?(?: Print)?$"),
-            Box::new(|captures| {
-                let neg = captures.get(1).is_some();
-                let inv = captures.get(3).is_some();
-                let corner = captures.get(5).is_some();
+    )> = brick_map_regex![
+        // TODO: Consider trying to handle fractional sizes that sometimes occur
+        // TODO: Remove (?: Print)? when prints exist
+        r"^(\d+)x(\d+)(?:x(\d+)|(F))?(?: Print)?$" => |captures| {
+            let width: u32 = captures.get(1).unwrap().as_str().parse().ok()?;
+            let length: u32 = captures.get(2).unwrap().as_str().parse().ok()?;
+            let z: u32 = if captures.get(4).is_some() { // F
+                2
+            } else { // x(Z)
+                captures
+                    .get(3)
+                    .map(|g| g.as_str().parse::<u32>().ok())
+                    .unwrap_or(Some(1))?
+                    * 6
+            };
+            Some(BrickMapping::with_size(
+                "PB_DefaultBrick",
+                (width * 5, length * 5, z),
+            ))
+        },
+        // TODO: Remove (?: Print)? when prints exist
+        r"^(-)?(25|45|72|80)° (Inv )?Ramp(?: (\d+)x)?( Corner)?(?: Print)?$" => |captures| {
+            let neg = captures.get(1).is_some();
+            let inv = captures.get(3).is_some();
+            let corner = captures.get(5).is_some();
 
-                if inv && !corner {
-                    return None;
-                }
+            if inv && !corner {
+                return None;
+            }
 
-                let asset = if neg {
-                    if inv {
-                        "PB_DefaultRampInnerCornerInverted"
-                    } else if corner {
-                        "PB_DefaultRampCornerInverted"
-                    } else {
-                        "PB_DefaultRampInverted"
-                    }
-                } else if inv {
-                    "PB_DefaultRampInnerCorner"
+            let asset = if neg {
+                if inv {
+                    "PB_DefaultRampInnerCornerInverted"
                 } else if corner {
-                    "PB_DefaultRampCorner"
+                    "PB_DefaultRampCornerInverted"
                 } else {
-                    "PB_DefaultRamp"
-                };
+                    "PB_DefaultRampInverted"
+                }
+            } else if inv {
+                "PB_DefaultRampInnerCorner"
+            } else if corner {
+                "PB_DefaultRampCorner"
+            } else {
+                "PB_DefaultRamp"
+            };
 
-                let degree_str = captures.get(2).unwrap().as_str();
+            let degree_str = captures.get(2).unwrap().as_str();
 
-                let (x, z) = if degree_str == "25" {
-                    (15, 6)
-                } else if degree_str == "45" {
-                    (10, 6)
-                } else if degree_str == "72" {
-                    (10, 18)
-                } else if degree_str == "80" {
-                    (10, 30)
-                } else {
+            let (x, z) = if degree_str == "25" {
+                (15, 6)
+            } else if degree_str == "45" {
+                (10, 6)
+            } else if degree_str == "72" {
+                (10, 18)
+            } else if degree_str == "80" {
+                (10, 30)
+            } else {
+                return None;
+            };
+
+            let mut y = x;
+
+            if let Some(group) = captures.get(4) {
+                if corner {
                     return None;
-                };
-
-                let mut y = x;
-
-                if let Some(group) = captures.get(4) {
-                    if corner {
-                        return None;
-                    }
-
-                    let length: u32 = group.as_str().parse().ok()?;
-                    y = length * 5;
                 }
 
-                Some(BrickMapping::with_size(asset, (x, y, z)))
-            })
-        ),
-        (
-            new_regex!(r"^(\d+)x(\d+)F Tile$"),
-            Box::new(|captures| {
-                let width: u32 = captures.get(1).unwrap().as_str().parse().ok()?;
-                let length: u32 = captures.get(2).unwrap().as_str().parse().ok()?;
-                Some(BrickMapping::with_size(
-                    "PB_DefaultTile",
-                    (width * 5, length * 5, 2),
-                ))
-            })
-        ),
-        (
-            new_regex!(r"^(\d+)x(\d+) Base$"),
-            Box::new(|captures| {
-                let width: u32 = captures.get(1).unwrap().as_str().parse().ok()?;
-                let length: u32 = captures.get(2).unwrap().as_str().parse().ok()?;
-                Some(BrickMapping::with_size(
-                    "PB_DefaultBrick",
-                    (width * 5, length * 5, 2),
-                ))
-            })
-        ),
-        (
-            new_regex!(r"^(\d+)x Cube$"),
-            Box::new(|captures| {
-                let size: u32 = captures.get(1).unwrap().as_str().parse().ok()?;
-                Some(BrickMapping::with_size(
-                    "PB_DefaultBrick",
-                    (size * 5, size * 5, size * 5),
-                ))
-            })
-        )
+                let length: u32 = group.as_str().parse().ok()?;
+                y = length * 5;
+            }
+
+            Some(BrickMapping::with_size(asset, (x, y, z)))
+        },
+        r"^(\d+)x(\d+)F Tile$" => |captures| {
+            let width: u32 = captures.get(1).unwrap().as_str().parse().ok()?;
+            let length: u32 = captures.get(2).unwrap().as_str().parse().ok()?;
+            Some(BrickMapping::with_size(
+                "PB_DefaultTile",
+                (width * 5, length * 5, 2),
+            ))
+        },
+        r"^(\d+)x(\d+) Base$" => |captures| {
+            let width: u32 = captures.get(1).unwrap().as_str().parse().ok()?;
+            let length: u32 = captures.get(2).unwrap().as_str().parse().ok()?;
+            Some(BrickMapping::with_size(
+                "PB_DefaultBrick",
+                (width * 5, length * 5, 2),
+            ))
+        },
+        r"^(\d+)x Cube$" => |captures| {
+            let size: u32 = captures.get(1).unwrap().as_str().parse().ok()?;
+            Some(BrickMapping::with_size(
+                "PB_DefaultBrick",
+                (size * 5, size * 5, size * 5),
+            ))
+        },
     ];
 }
 
