@@ -224,6 +224,25 @@ lazy_static! {
             Some(vec![BrickDesc::new(asset).size((x, y, z)).rotation_offset(0)])
         },
 
+        r"(?P<angle>25|45)° Crest (?:(?P<end>End)|(?P<corner>Corner)|(?P<length>\d+)x)" => |captures, _| {
+            let z = match captures.name("angle").unwrap().as_str() {
+                s if s == "25" => 2,
+                s if s == "45" => 6,
+                _ => return None,
+            };
+
+            let (asset, x, y) = if captures.name("end").is_some() {
+                ("PB_DefaultRampCrestEnd", 10, 5)
+            } else if captures.name("corner").is_some() {
+                ("PB_DefaultRampCrestCorner", 10, 10)
+            } else {
+                let length: u32 = captures.name("length").unwrap().as_str().parse().ok()?;
+                ("PB_DefaultRampCrest", 10, length * 5)
+            };
+
+            Some(vec![BrickDesc::new(asset).size((x, y, z))])
+        },
+
         r"^(\d+)x(\d+)F Tile$" => |captures, _| {
             let width: u32 = captures.get(1).unwrap().as_str().parse().ok()?;
             let length: u32 = captures.get(2).unwrap().as_str().parse().ok()?;
