@@ -45,12 +45,15 @@ lazy_static! {
         "1x1F Round" => BrickMapping::new("B_1x1F_Round"),
         "2x2 Round" => BrickMapping::new("B_2x2_Round"),
         "2x2F Round" => BrickMapping::new("B_2x2F_Round"),
-        "Pine Tree" => BrickMapping::with_offset("B_Pine_Tree", (0, 0, -6)),
-        "32x32 Road" => BrickMapping::with_size("PB_DefaultBrick", (160, 160, 2)),
-        "32x32 Road X" => BrickMapping::with_size("PB_DefaultBrick", (160, 160, 2)),
-        "32x32 Road T" => BrickMapping::with_size("PB_DefaultBrick", (160, 160, 2)),
-        // "1x4x5 Window" => BrickMapping::with_size("PB_DefaultBrick", (4*5, 1*5, 5*6)),
-        "Music Brick" => BrickMapping::with_size("PB_DefaultBrick", (5, 5, 6)),
+        "Pine Tree" => BrickMapping::new("B_Pine_Tree").offset((0, 0, -6)),
+
+        "32x32 Road" => BrickMapping::new("PB_DefaultBrick").size((160, 160, 2)),
+        "32x32 Road X" => BrickMapping::new("PB_DefaultBrick").size((160, 160, 2)),
+        "32x32 Road T" => BrickMapping::new("PB_DefaultBrick").size((160, 160, 2)),
+
+        // "1x4x5 Window" => BrickMapping::new("PB_DefaultBrick").size((4*5, 1*5, 5*6)),
+        "Music Brick" => BrickMapping::new("PB_DefaultBrick").size((5, 5, 6)),
+        "2x2 Disc" => BrickMapping::new("B_2x2F_Round"),
     ];
 
     static ref BRICK_MAP_REGEX: Vec<(
@@ -59,11 +62,13 @@ lazy_static! {
     )> = brick_map_regex![
         // TODO: Consider trying to handle fractional sizes that sometimes occur
         // TODO: Remove (?: Print)? when prints exist
-        r"^(\d+)x(\d+)(?:x(\d+)|(F))?(?: Print)?$" => |captures| {
+        r"^(\d+)x(\d+)(?:x(\d+)|([Ff])|([Hh]))?( Print)?$" => |captures| {
             let width: u32 = captures.get(1).unwrap().as_str().parse().ok()?;
             let length: u32 = captures.get(2).unwrap().as_str().parse().ok()?;
             let z: u32 = if captures.get(4).is_some() { // F
                 2
+            } else if captures.get(5).is_some() { // H
+                4
             } else { // x(Z)
                 captures
                     .get(3)
@@ -71,10 +76,9 @@ lazy_static! {
                     .unwrap_or(Some(1))?
                     * 6
             };
-            Some(BrickMapping::with_size(
-                "PB_DefaultBrick",
-                (width * 5, length * 5, z),
-            ))
+            let print = captures.get(6).is_some();
+            let rotation_offset = if print { 0 } else { 1 };
+            Some(BrickMapping::new("PB_DefaultBrick").size((width * 5, length * 5, z)).rotation_offset(rotation_offset))
         },
         // TODO: Remove (?: Print)? when prints exist
         r"^(-)?(25|45|72|80)° (Inv )?Ramp(?: (\d+)x)?( Corner)?(?: Print)?$" => |captures| {
@@ -127,30 +131,21 @@ lazy_static! {
                 y = length * 5;
             }
 
-            Some(BrickMapping::with_size(asset, (x, y, z)))
+            Some(BrickMapping::new(asset).size((x, y, z)).rotation_offset(0))
         },
         r"^(\d+)x(\d+)F Tile$" => |captures| {
             let width: u32 = captures.get(1).unwrap().as_str().parse().ok()?;
             let length: u32 = captures.get(2).unwrap().as_str().parse().ok()?;
-            Some(BrickMapping::with_size(
-                "PB_DefaultTile",
-                (width * 5, length * 5, 2),
-            ))
+            Some(BrickMapping::new("PB_DefaultTile").size((width * 5, length * 5, 2)))
         },
         r"^(\d+)x(\d+) Base$" => |captures| {
             let width: u32 = captures.get(1).unwrap().as_str().parse().ok()?;
             let length: u32 = captures.get(2).unwrap().as_str().parse().ok()?;
-            Some(BrickMapping::with_size(
-                "PB_DefaultBrick",
-                (width * 5, length * 5, 2),
-            ))
+            Some(BrickMapping::new("PB_DefaultBrick").size((width * 5, length * 5, 2)))
         },
         r"^(\d+)x Cube$" => |captures| {
             let size: u32 = captures.get(1).unwrap().as_str().parse().ok()?;
-            Some(BrickMapping::with_size(
-                "PB_DefaultBrick",
-                (size * 5, size * 5, size * 5),
-            ))
+            Some(BrickMapping::new("PB_DefaultBrick").size((size * 5, size * 5, size * 5)))
         },
     ];
 }
@@ -200,16 +195,18 @@ pub fn convert(reader: bl_save::Reader<impl BufRead>) -> io::Result<ConvertRepor
         let mapping = converter.map_ui_name(&from.base.ui_name);
 
         match mapping {
-            Some(BrickMapping::Direct {
+            Some(BrickMapping {
                 asset,
                 size,
                 offset,
+                rotation_offset,
             }) => {
                 count_success += 1;
 
                 let asset = *asset;
                 let size = *size;
                 let offset = *offset;
+                let rotation_offset = *rotation_offset;
 
                 let asset_name_index = converter.asset(asset);
 
@@ -219,12 +216,7 @@ pub fn convert(reader: bl_save::Reader<impl BufRead>) -> io::Result<ConvertRepor
                     (from.base.position.2 * 20.0) as i32 + offset.2,
                 );
 
-                let mut rotation = (from.base.angle + 1) % 4;
-
-                if asset.find("Ramp").is_some() {
-                    // rotation = ((rotation + 4 - 1) % 4) - 4;
-                    rotation = (rotation + 4 - 1) % 4;
-                }
+                let rotation = (from.base.angle + rotation_offset) % 4;
 
                 let material_index = match from.base.color_fx {
                     3 => BMC_GLOW,
@@ -329,49 +321,36 @@ fn map_ui_name(ui_name: &str) -> Option<BrickMapping<'static>> {
 }
 
 #[derive(Debug, Clone)]
-enum BrickMapping<'s> {
-    Direct {
-        asset: &'s str,
-        size: (u32, u32, u32),
-        offset: (i32, i32, i32),
-    },
+struct BrickMapping<'s> {
+    asset: &'s str,
+    size: (u32, u32, u32),
+    offset: (i32, i32, i32),
+    rotation_offset: u8,
 }
 
 impl<'s> BrickMapping<'s> {
     const fn new(asset: &'s str) -> Self {
-        BrickMapping::Direct {
+        Self {
             asset,
             size: (0, 0, 0),
             offset: (0, 0, 0),
+            rotation_offset: 1,
         }
     }
 
-    const fn with_size(asset: &'s str, size: (u32, u32, u32)) -> Self {
-        BrickMapping::Direct {
-            asset,
-            size,
-            offset: (0, 0, 0),
-        }
+    fn size(mut self, size: (u32, u32, u32)) -> Self {
+        self.size = size;
+        self
     }
 
-    const fn with_offset(asset: &'s str, offset: (i32, i32, i32)) -> Self {
-        BrickMapping::Direct {
-            asset,
-            size: (0, 0, 0),
-            offset,
-        }
+    fn offset(mut self, offset: (i32, i32, i32)) -> Self {
+        self.offset = offset;
+        self
     }
 
-    const fn with_size_and_offset(
-        asset: &'s str,
-        size: (u32, u32, u32),
-        offset: (i32, i32, i32),
-    ) -> Self {
-        BrickMapping::Direct {
-            asset,
-            size,
-            offset,
-        }
+    fn rotation_offset(mut self, rotation: u8) -> Self {
+        self.rotation_offset = rotation;
+        self
     }
 }
 
