@@ -225,22 +225,25 @@ lazy_static! {
         },
 
         r"(?P<angle>25|45)° Crest (?:(?P<end>End)|(?P<corner>Corner)|(?P<length>\d+)x)" => |captures, _| {
-            let z = match captures.name("angle").unwrap().as_str() {
-                s if s == "25" => 2,
-                s if s == "45" => 6,
+            let (z, offset) = match captures.name("angle").unwrap().as_str() {
+                s if s == "25" => (4, -2),
+                s if s == "45" => (6, 0),
                 _ => return None,
             };
 
-            let (asset, x, y) = if captures.name("end").is_some() {
-                ("PB_DefaultRampCrestEnd", 10, 5)
+            let (asset, x, y, rotation) = if captures.name("end").is_some() {
+                ("PB_DefaultRampCrestEnd", 10, 5, 2)
             } else if captures.name("corner").is_some() {
-                ("PB_DefaultRampCrestCorner", 10, 10)
+                ("PB_DefaultRampCrestCorner", 10, 10, 0)
             } else {
                 let length: u32 = captures.name("length").unwrap().as_str().parse().ok()?;
-                ("PB_DefaultRampCrest", 10, length * 5)
+                ("PB_DefaultRampCrest", 10, length * 5, 0)
             };
 
-            Some(vec![BrickDesc::new(asset).size((x, y, z))])
+            Some(vec![BrickDesc::new(asset)
+                .size((x, y, z))
+                .rotation_offset(rotation)
+                .offset((0, 0, offset))])
         },
 
         r"^(\d+)x(\d+)F Tile$" => |captures, _| {
