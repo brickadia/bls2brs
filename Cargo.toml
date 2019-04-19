@@ -8,7 +8,4 @@ edition = "2018"
 lazy_static = "1"
 regex = "1"
 bl_save = "0.2"
-
-[dependencies.brs]
-git = "https://github.com/brickadia/brs"
-rev = "a95cadd7002817cf7a857dad00408b3955cfd9fb"
+brs = "0.1"
