@@ -7,7 +7,7 @@ edition = "2018"
 [dependencies]
 lazy_static = "1"
 regex = "1"
-bl_save = "0.1"
+bl_save = "0.2"
 
 [dependencies.brs]
 git = "https://github.com/brickadia/brs"

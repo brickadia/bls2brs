@@ -39,7 +39,7 @@ pub fn convert(reader: bl_save::Reader<impl BufRead>) -> io::Result<ConvertRepor
             id: Uuid::nil(),
             name: String::from("Unknown"),
         },
-        description: reader.description().join("\n"),
+        description: reader.description().to_string(),
         save_time: Utc::now(),
         mods: vec![],
         brick_assets: vec![],
@@ -52,7 +52,7 @@ pub fn convert(reader: bl_save::Reader<impl BufRead>) -> io::Result<ConvertRepor
             id: Uuid::from_bytes([u8::max_value(); 16]),
             name: String::from("PUBLIC"),
         }],
-        bricks: Vec::with_capacity(reader.brick_count().min(10_000_000)),
+        bricks: Vec::with_capacity(reader.brick_count().unwrap_or(100).min(10_000_000)),
     };
 
     let mut converter = Converter {
