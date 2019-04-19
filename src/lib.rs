@@ -1,6 +1,7 @@
 use brs::{chrono::prelude::*, uuid::Uuid};
 use std::{
     collections::HashMap,
+    convert::TryInto,
     io::{self, prelude::*},
     ops::Neg,
 };
@@ -113,8 +114,8 @@ pub fn convert(reader: bl_save::Reader<impl BufRead>) -> io::Result<ConvertRepor
                 asset_name_index: asset_name_index as u32,
                 size,
                 position,
-                direction: brs::DIRECTION_Z_POSITIVE,
-                rotation,
+                direction: brs::Direction::ZPositive,
+                rotation: rotation.try_into().unwrap(),
                 collision: from.base.collision,
                 visibility: from.base.rendering,
                 material_index: material_index as u32,
