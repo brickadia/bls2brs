@@ -1,41 +1,63 @@
 use bls2brs::{bl_save, brs, convert};
 use std::{
     fs::File,
-    io::{self, BufReader},
+    ffi::OsStr,
+    io::BufReader,
     path::{Path, PathBuf},
 };
 
-fn main() -> io::Result<()> {
-    let args = parse_args().unwrap_or_else(|program| {
-        eprintln!("Usage: {} <bls files ...>", program);
-        std::process::exit(1);
-    });
+fn main() {
+    eprintln!("{} v{}", env!("CARGO_PKG_NAME"), env!("CARGO_PKG_VERSION"));
+    eprintln!();
+
+    if let Err(e) = run() {
+        eprintln!("{}", e);
+        eprintln!();
+        wexit::prompt_enter_to_exit(1);
+    }
+
+    eprintln!();
+    wexit::prompt_enter_to_exit(0);
+}
+
+fn run() -> Result<(), String> {
+    let args = parse_args()
+        .map_err(|_| String::from("Error: No bls files given. Pass one or more bls files as command line arguments, or drag them onto the program."))?;
 
     for (i, input_path) in args.input_paths.iter().enumerate() {
         if i > 0 {
             println!();
         }
 
-        let mut output_path = PathBuf::from(input_path);
+        let input_path = PathBuf::from(input_path);
+
+        println!("Converting {}", input_path.display());
+
+        if input_path.extension() != Some(OsStr::new("bls")) {
+            println!("Extension is not .bls, skipping");
+            continue;
+        }
+
+        let mut output_path = input_path.clone();
+
         output_path.set_extension("brs");
 
-        convert_one(input_path, &output_path);
+        convert_one(&input_path, &output_path)
+            .map_err(|e| format!("Error converting {}: {}", input_path.display(), e))?;
     }
 
     Ok(())
 }
 
-fn convert_one(input_path: impl AsRef<Path>, output_path: impl AsRef<Path>) {
+fn convert_one(input_path: impl AsRef<Path>, output_path: impl AsRef<Path>) -> Result<(), String> {
     let input_path = input_path.as_ref();
     let output_path = output_path.as_ref();
 
-    println!("Converting {}", input_path.display());
-
-    let input_file = try_or_die(File::open(input_path), "Failed to open bls file");
+    let input_file = errmsg(File::open(input_path), "Failed to open bls file")?;
     let input_file = BufReader::new(input_file);
-    let input_reader = try_or_die(bl_save::Reader::new(input_file), "Failed to read bls file");
+    let input_reader = errmsg(bl_save::Reader::new(input_file), "Failed to read bls file")?;
 
-    let mut converted = try_or_die(convert(input_reader), "Failed to convert bls file");
+    let mut converted = errmsg(convert(input_reader), "Failed to convert bls file")?;
 
     if let Some(file_name) = input_path.file_name() {
         let mut prefix = format!(
@@ -55,7 +77,7 @@ fn convert_one(input_path: impl AsRef<Path>, output_path: impl AsRef<Path>) {
         let mut ui_names: Vec<_> = converted.unknown_ui_names.into_iter().collect();
         ui_names.sort_by(|(_, ac), (_, bc)| ac.cmp(bc).reverse());
         for (ui_name, count) in ui_names {
-            let ui_name = if ui_name.ends_with(" ") {
+            let ui_name = if ui_name != ui_name.trim() {
                 format!("{:?}", ui_name)
             } else {
                 ui_name
@@ -75,37 +97,33 @@ fn convert_one(input_path: impl AsRef<Path>, output_path: impl AsRef<Path>) {
         converted.write_data.bricks.len(),
     );
 
-    let mut output_file = try_or_die(File::create(output_path), "Failed to create BRS file");
+    let mut output_file = errmsg(File::create(output_path), "Failed to create BRS file")?;
 
-    try_or_die(
+    errmsg(
         brs::write_save(&mut output_file, &converted.write_data),
         "Failed to write BRS file",
-    );
+    )?;
+
+    Ok(())
 }
 
 struct Args {
     input_paths: Vec<String>,
 }
 
-fn parse_args() -> Result<Args, String> {
+fn parse_args() -> Result<Args, ()> {
     let mut args = std::env::args();
-    let program = args.next().unwrap();
+    args.next().unwrap();
 
     let input_paths: Vec<_> = args.collect();
 
     if input_paths.is_empty() {
-        return Err(program.clone())?;
+        return Err(())?;
     }
 
     Ok(Args { input_paths })
 }
 
-fn try_or_die<T, E: std::fmt::Display>(r: Result<T, E>, message_prefix: &str) -> T {
-    match r {
-        Ok(t) => t,
-        Err(e) => {
-            eprintln!("{}: {}", message_prefix, e);
-            std::process::exit(1)
-        }
-    }
+fn errmsg<T, E: std::fmt::Display>(r: Result<T, E>, message_prefix: &str) -> Result<T, String> {
+    r.map_err(|e| format!("{}: {}", message_prefix, e))
 }

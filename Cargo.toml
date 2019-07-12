@@ -1,6 +1,6 @@
 [package]
 name = "bls2brs"
-version = "0.1.0"
+version = "0.2.0"
 authors = ["ns <portification@gmail.com>"]
 edition = "2018"
 
@@ -9,3 +9,4 @@ lazy_static = "1"
 regex = "1"
 bl_save = "0.2"
 brs = "0.1"
+wexit = "0.1"

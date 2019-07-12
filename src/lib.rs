@@ -180,7 +180,7 @@ impl Converter {
         }
 
         let index = self.write_data.colors.len();
-        self.write_data.colors.push(color.clone());
+        self.write_data.colors.push(color);
         index
     }
 }
