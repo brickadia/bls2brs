@@ -28,6 +28,7 @@ lazy_static! {
         "2x2 Round" => BrickDesc::new("B_2x2_Round"),
         "2x2F Round" => BrickDesc::new("B_2x2F_Round"),
         "Pine Tree" => BrickDesc::new("B_Pine_Tree").offset((0, 0, -6)),
+        "2x2 Corner" => BrickDesc::new("B_2x2_Corner").rotation_offset(3),
 
         // # Approximate mappings
 
