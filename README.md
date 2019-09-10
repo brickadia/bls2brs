@@ -8,7 +8,7 @@ Executables for Linux and Windows can be found on [the Releases page].
 
 ## Usage
 
-Drag `.bls` files onto the executable to create corresponding `.brs` files next to them.
+Drag `.bls` files onto the executable (`bls2brs.exe` or `bls2brs`) to create corresponding `.brs` files next to them.
 
 Not all Blockland bricks are supported, but the converter tries its best to support many variants.
 
