@@ -32,6 +32,7 @@ lazy_static! {
         "2x2 Corner" => BrickDesc::new("B_2x2_Corner").rotation_offset(3),
         "2x2 Octo Plate" => BrickDesc::new("B_2x2F_Octo"),
         "8x8 Grill" => BrickDesc::new("B_8x8_Lattice_Plate"),
+        "1x4x2 Picket" => BrickDesc::new("B_Picket_Fence"),
 
         // # Approximate mappings
 
