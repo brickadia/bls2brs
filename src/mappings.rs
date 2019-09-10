@@ -24,11 +24,13 @@ lazy_static! {
 
         "1x1 Cone" => BrickDesc::new("B_1x1_Cone"),
         "1x1 Round" => BrickDesc::new("B_1x1_Round"),
+        "1x1 Octo Plate" => BrickDesc::new("B_1x1F_Octo"),
         "1x1F Round" => BrickDesc::new("B_1x1F_Round"),
         "2x2 Round" => BrickDesc::new("B_2x2_Round"),
         "2x2F Round" => BrickDesc::new("B_2x2F_Round"),
         "Pine Tree" => BrickDesc::new("B_Pine_Tree").offset((0, 0, -6)),
         "2x2 Corner" => BrickDesc::new("B_2x2_Corner").rotation_offset(3),
+        "2x2 Octo Plate" => BrickDesc::new("B_2x2F_Octo"),
         "8x8 Grill" => BrickDesc::new("B_8x8_Lattice_Plate"),
 
         // # Approximate mappings
@@ -36,10 +38,17 @@ lazy_static! {
         "2x2 Disc" => BrickDesc::new("B_2x2F_Round"),
         "Music Brick" => BrickDesc::new("PB_DefaultBrick").size((5, 5, 6)),
         "1x4x2 Fence" => BrickDesc::new("PB_DefaultBrick").size((5, 4*5, 2*6)).rotation_offset(0),
+        "2x2x1 Octo Cone" => BrickDesc::new("B_2x2_Round"),
 
         "2x2x2 Cone" => vec![
             BrickDesc::new("B_2x_Octo_Cone").offset((0, 0, -2)),
             BrickDesc::new("B_1x1F_Round").offset((0, 0, 2*6-2)),
+        ],
+
+        "2x2 Octo" => vec![
+            BrickDesc::new("B_2x2F_Octo").offset((0, 0, -4)),
+            BrickDesc::new("B_2x2F_Octo"),
+            BrickDesc::new("B_2x2F_Octo").offset((0, 0, 4)),
         ],
 
         "Castle Wall" => vec![
