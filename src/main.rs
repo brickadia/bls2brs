@@ -22,7 +22,7 @@ fn main() {
 
 fn run() -> Result<(), String> {
     let args = parse_args()
-        .map_err(|_| String::from("Error: No bls files given. Pass one or more bls files as command line arguments, or drag them onto the program."))?;
+        .map_err(|_| String::from("Error: No bls files given. Drag them onto this program's executable file. (Not this window! This is just an error message, not the program itself.)"))?;
 
     for (i, input_path) in args.input_paths.iter().enumerate() {
         if i > 0 {
