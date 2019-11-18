@@ -29,7 +29,7 @@ lazy_static! {
         "2x2 Round" => BrickDesc::new("B_2x2_Round"),
         "2x2F Round" => BrickDesc::new("B_2x2F_Round"),
         "Pine Tree" => BrickDesc::new("B_Pine_Tree").offset((0, 0, -6)),
-        "2x2 Corner" => BrickDesc::new("B_2x2_Corner").rotation_offset(3),
+        "2x2 Corner" => BrickDesc::new("B_2x2_Corner").rotation_offset(0),
         "2x2 Octo Plate" => BrickDesc::new("B_2x2F_Octo"),
         "8x8 Grill" => BrickDesc::new("B_8x8_Lattice_Plate"),
         "1x4x2 Picket" => BrickDesc::new("B_Picket_Fence"),
