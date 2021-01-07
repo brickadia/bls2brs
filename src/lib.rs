@@ -85,6 +85,7 @@ pub fn convert(reader: bl_save::Reader<impl BufRead>) -> io::Result<ConvertRepor
             offset,
             rotation_offset,
             color_override,
+            direction_override,
         } in mappings
         {
             let asset_name_index = converter.asset(asset);
@@ -114,7 +115,7 @@ pub fn convert(reader: bl_save::Reader<impl BufRead>) -> io::Result<ConvertRepor
                 asset_name_index: asset_name_index as u32,
                 size,
                 position,
-                direction: brs::Direction::ZPositive,
+                direction: direction_override.unwrap_or(brs::Direction::ZPositive),
                 rotation: rotation.try_into().unwrap(),
                 collision: from.base.collision,
                 visibility: from.base.rendering,

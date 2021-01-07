@@ -7,6 +7,7 @@ pub struct BrickDesc {
     pub offset: (i32, i32, i32),
     pub rotation_offset: u8,
     pub color_override: Option<brs::Color>,
+    pub direction_override: Option<brs::Direction>,
 }
 
 impl BrickDesc {
@@ -17,6 +18,7 @@ impl BrickDesc {
             offset: (0, 0, 0),
             rotation_offset: 1,
             color_override: None,
+            direction_override: None,
         }
     }
 
@@ -37,6 +39,11 @@ impl BrickDesc {
 
     pub fn color_override(mut self, color_override: brs::Color) -> Self {
         self.color_override = Some(color_override);
+        self
+    }
+
+    pub fn direction_override(mut self, direction_override: brs::Direction) -> Self {
+        self.direction_override = Some(direction_override);
         self
     }
 }
