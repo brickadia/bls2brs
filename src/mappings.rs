@@ -185,7 +185,7 @@ lazy_static! {
         },
 
         // TODO: Remove (?: Print)? when prints exist
-        r"^(-)?(25|45|72|80)° (Inv )?Ramp(?: (\d+)x)?( Corner)?(?: Print)?$" => |captures, _| {
+        r"^(-)?(25|45|65|72|80)° (Inv )?Ramp(?: (\d+)x)?( Corner)?(?: Print)?$" => |captures, _| {
             let neg = captures.get(1).is_some();
             let inv = captures.get(3).is_some();
             let corner = captures.get(5).is_some();
@@ -216,6 +216,8 @@ lazy_static! {
                 (15, 6)
             } else if degree_str == "45" {
                 (10, 6)
+            } else if degree_str == "65" {
+                (10, 12)
             } else if degree_str == "72" {
                 (10, 18)
             } else if degree_str == "80" {
