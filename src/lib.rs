@@ -85,6 +85,7 @@ pub fn convert(reader: bl_save::Reader<impl BufRead>) -> io::Result<ConvertRepor
             offset,
             rotation_offset,
             color_override,
+            direction_override,
         } in mappings
         {
             let asset_name_index = converter.asset(asset);
@@ -114,7 +115,7 @@ pub fn convert(reader: bl_save::Reader<impl BufRead>) -> io::Result<ConvertRepor
                 asset_name_index: asset_name_index as u32,
                 size,
                 position,
-                direction: brs::Direction::ZPositive,
+                direction: direction_override.unwrap_or(brs::Direction::ZPositive),
                 rotation: rotation.try_into().unwrap(),
                 collision: from.base.collision,
                 visibility: from.base.rendering,
@@ -203,10 +204,10 @@ fn map_brick(from: &bl_save::Brick) -> Option<BrickMapping> {
 
 fn map_color((r, g, b, a): (f32, f32, f32, f32)) -> brs::Color {
     // Convert into Unreal color space
-    let r = r.powf(2.2);
-    let g = g.powf(2.2);
-    let b = b.powf(2.2);
-    let a = a.powf(2.2);
+    let r = gamma_expansion(r);
+    let g = gamma_expansion(g);
+    let b = gamma_expansion(b);
+    let a = gamma_expansion(a);
 
     // Convert to 0-255
     let r = (r * 255.0).max(0.0).min(255.0) as u8;
@@ -215,6 +216,14 @@ fn map_color((r, g, b, a): (f32, f32, f32, f32)) -> brs::Color {
     let a = (a * 255.0).max(0.0).min(255.0) as u8;
 
     brs::Color::from_rgba(r, g, b, a)
+}
+
+fn gamma_expansion(u: f32) -> f32 {
+    if u <= 0.04045 {
+        return u / 12.92;
+    }
+    let base = (u + 0.055) / 1.055;
+    base.powf(2.4)
 }
 
 fn rotate_offset(mut offset: (i32, i32), angle: u8) -> (i32, i32) {
