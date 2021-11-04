@@ -318,5 +318,27 @@ lazy_static! {
                 .offset(offset)
                 .rotation_offset(rotation)])
         },
+        r"(\d+)x(\d+)x?(?P<height>\d+)? Arch(?P<up> Up)?" => |captures, _| {
+            let width: u32 = captures.get(1).unwrap().as_str().parse().ok()?;
+            let length: u32 = captures.get(2).unwrap().as_str().parse().ok()?;
+            let height: u32 = if captures.name("height").is_some() {
+                captures.name("height").unwrap().as_str().parse().ok()?
+            } else {
+                match length {
+                    5 => 2,
+                    8 => 3,
+                    _ => 1
+                }
+            };
+            let direction = if captures.name("up").is_some() {
+                brs::Direction::ZNegative
+            } else {
+                brs::Direction::ZPositive
+            };
+            Some(vec![BrickDesc::new("PB_DefaultArch")
+                .size((width * 5, length * 5, height * 6))
+                .direction_override(direction)
+            ])
+        },
     ];
 }
