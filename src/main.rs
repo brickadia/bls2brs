@@ -118,7 +118,7 @@ fn parse_args() -> Result<Args, ()> {
     let input_paths: Vec<_> = args.collect();
 
     if input_paths.is_empty() {
-        return Err(())?;
+        return Err(());
     }
 
     Ok(Args { input_paths })
