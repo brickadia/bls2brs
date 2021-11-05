@@ -1,6 +1,6 @@
 #![allow(clippy::identity_op)]
 
-use crate::types::{AsBrickDescVec, BrickDesc, BrickMapping};
+use crate::types::{BrickDesc, BrickMapping};
 use lazy_static::lazy_static;
 use regex::{Captures, Regex};
 use std::collections::{HashMap, HashSet};

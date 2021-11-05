@@ -13,7 +13,7 @@ macro_rules! map {
 macro_rules! brick_map_literal {
     [$($ui:expr => $map:expr),* $(,)?] => {
         map![
-            $($ui => AsBrickDescVec::as_brick_mapping_vec($map),)*
+            $($ui => $map.into(),)*
         ]
     }
 }

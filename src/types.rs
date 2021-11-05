@@ -62,18 +62,8 @@ impl BrickDesc {
     }
 }
 
-pub trait AsBrickDescVec<'s> {
-    fn as_brick_mapping_vec(self) -> BrickMapping;
-}
-
-impl<'s> AsBrickDescVec<'s> for BrickDesc {
-    fn as_brick_mapping_vec(self) -> BrickMapping {
-        vec![self]
-    }
-}
-
-impl<'s> AsBrickDescVec<'s> for BrickMapping {
-    fn as_brick_mapping_vec(self) -> BrickMapping {
-        self
+impl From<BrickDesc> for BrickMapping {
+    fn from(desc: BrickDesc) -> Self {
+        vec![desc]
     }
 }
