@@ -2,7 +2,7 @@
 name = "bls2brs"
 version = "0.3.0"
 authors = ["ns <ns@brickadia.com>"]
-edition = "2018"
+edition = "2021"
 
 [dependencies]
 lazy_static = "1"
