@@ -8,6 +8,8 @@ pub struct BrickDesc {
     pub rotation_offset: u8,
     pub color_override: Option<brs::Color>,
     pub direction_override: Option<brs::Direction>,
+    pub microwedge_rotate: bool,
+    pub inverted_modter_rotate: bool,
 }
 
 impl BrickDesc {
@@ -19,6 +21,8 @@ impl BrickDesc {
             rotation_offset: 1,
             color_override: None,
             direction_override: None,
+            microwedge_rotate: false,
+            inverted_modter_rotate: false,
         }
     }
 
@@ -44,6 +48,16 @@ impl BrickDesc {
 
     pub fn direction_override(mut self, direction_override: brs::Direction) -> Self {
         self.direction_override = Some(direction_override);
+        self
+    }
+
+    pub fn microwedge_rotate(mut self, microwedge_rotate: bool) -> Self {
+        self.microwedge_rotate = microwedge_rotate;
+        self
+    }
+
+    pub fn inverted_modter_rotate(mut self, inverted_modter_rotate: bool) -> Self {
+        self.inverted_modter_rotate = inverted_modter_rotate;
         self
     }
 }

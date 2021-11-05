@@ -86,10 +86,12 @@ pub fn convert(reader: bl_save::Reader<impl BufRead>) -> io::Result<ConvertRepor
             rotation_offset,
             color_override,
             direction_override,
+            microwedge_rotate,
+            inverted_modter_rotate,
         } in mappings
         {
             let asset_name_index = converter.asset(asset);
-            let rotation = (from.base.angle + rotation_offset) % 4;
+            let mut rotation = (from.base.angle + rotation_offset) % 4;
 
             let rotated_xy = rotate_offset((offset.0, offset.1), from.base.angle);
             let offset = (rotated_xy.0, rotated_xy.1, offset.2);
@@ -110,6 +112,47 @@ pub fn convert(reader: bl_save::Reader<impl BufRead>) -> io::Result<ConvertRepor
                 Some(color) => converter.color(color) as u32,
                 None => u32::from(from.base.color_index),
             };
+
+            // convert a vertical slope to microwedge
+            let mut direction_override = direction_override;
+            let original_dir = direction_override;
+            let mut size = size;
+            if microwedge_rotate {
+                if rotation == 0 || rotation == 2 {
+                    direction_override = Some(brs::Direction::YPositive);
+                    if rotation == 0 {
+                        let (x, z) = (size.0, size.2);
+                        size.0 = z;
+                        size.2 = x;
+                    } else {
+                        let (y, z) = (size.1, size.2);
+                        size.1 = z;
+                        size.2 = y;
+                        rotation = (rotation + 1) % 4;
+                    }
+                } else {
+                    direction_override = Some(brs::Direction::XPositive);
+                    if rotation == 1 {
+                        let (y, z) = (size.1, size.2);
+                        size.1 = z;
+                        size.2 = y;
+                        rotation = (rotation + 2) % 4;
+                    } else {
+                        let (x, z) = (size.0, size.2);
+                        size.0 = z;
+                        size.2 = x;
+                        rotation = (rotation + 1) % 4;
+                    }
+                }
+                if original_dir.is_some() && original_dir.unwrap() == brs::Direction::ZNegative {
+                    rotation = (rotation + 2) % 4;
+                }
+            }
+
+            // fix odd rotation offsets on inverted ModTer
+            if inverted_modter_rotate && (rotation == 1 || rotation == 3) {
+                rotation = (rotation + 2) % 4;
+            }
 
             let brick = brs::Brick {
                 asset_name_index: asset_name_index as u32,
