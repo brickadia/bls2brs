@@ -87,6 +87,7 @@ pub fn convert(reader: bl_save::Reader<impl BufRead>) -> io::Result<ConvertRepor
             color_override,
             direction_override,
             microwedge_rotate,
+            inverted_modter_rotate,
         } in mappings
         {
             let asset_name_index = converter.asset(asset);
@@ -127,8 +128,7 @@ pub fn convert(reader: bl_save::Reader<impl BufRead>) -> io::Result<ConvertRepor
                         let (y, z) = (size.1, size.2);
                         size.1 = z;
                         size.2 = y;
-                        rotation += 1;
-                        rotation %= 4;
+                        rotation = (rotation + 1) % 4;
                     }
                 } else {
                     direction_override = Some(brs::Direction::XPositive);
@@ -136,21 +136,22 @@ pub fn convert(reader: bl_save::Reader<impl BufRead>) -> io::Result<ConvertRepor
                         let (y, z) = (size.1, size.2);
                         size.1 = z;
                         size.2 = y;
-                        rotation += 2;
-                        rotation %= 4;
+                        rotation = (rotation + 2) % 4;
                     } else {
                         let (x, z) = (size.0, size.2);
                         size.0 = z;
                         size.2 = x;
-                        rotation += 1;
-                        rotation %= 4;
+                        rotation = (rotation + 1) % 4;
                     }
                 }
-
                 if original_dir.is_some() && original_dir.unwrap() == brs::Direction::ZNegative {
-                    rotation += 2;
-                    rotation %= 4;
+                    rotation = (rotation + 2) % 4;
                 }
+            }
+
+            // fix odd rotation offsets on inverted ModTer
+            if inverted_modter_rotate && (rotation == 1 || rotation == 3) {
+                rotation = (rotation + 2) % 4;
             }
 
             let brick = brs::Brick {

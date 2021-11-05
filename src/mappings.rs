@@ -292,22 +292,20 @@ lazy_static! {
             } else {
                 size * 5
             };
-            let mut mw = false;
-            let (asset, rotation, use_offset) = if captures.name("cube").is_some() {
-                ("PB_DefaultMicroBrick", 1, false)
+            let (asset, mut rotation, use_offset, mw) = if captures.name("cube").is_some() {
+                ("PB_DefaultMicroBrick", 1, false, false)
             } else if captures.name("wedge").is_some() {
-                ("PB_DefaultMicroWedge", 2, false)
+                ("PB_DefaultMicroWedge", 2, false, false)
             } else if captures.name("ramp").is_some() {
-                mw = true;
-                ("PB_DefaultMicroWedge", 3, false)
+                ("PB_DefaultMicroWedge", 3, false, true)
             } else if captures.name("cornera").is_some() {
-                ("PB_DefaultMicroWedgeTriangleCorner", 2, false)
+                ("PB_DefaultMicroWedgeTriangleCorner", 2, false, false)
             } else if captures.name("cornerb").is_some() {
-                ("PB_DefaultMicroWedgeOuterCorner", 2, false)
+                ("PB_DefaultMicroWedgeOuterCorner", 2, false, false)
             } else if captures.name("cornerc").is_some() {
-                ("PB_DefaultMicroWedgeCorner", 2, false)
+                ("PB_DefaultMicroWedgeCorner", 2, false, false)
             } else if captures.name("cornerd").is_some() {
-                ("PB_DefaultMicroWedgeInnerCorner", 2, false)
+                ("PB_DefaultMicroWedgeInnerCorner", 2, false, false)
             } else {
                 unreachable!()
             };
@@ -316,24 +314,24 @@ lazy_static! {
             } else {
                 (0, 0, 0)
             };
-            let direction = if captures.name("inv").is_some() {
-                brs::Direction::ZNegative
+            let (direction, imr) = if captures.name("inv").is_some() {
+                if captures.name("ramp").is_some() {
+                    rotation += 2;
+                    (brs::Direction::ZNegative, false)
+                } else {
+                    rotation += 3;
+                    (brs::Direction::ZNegative, true)
+                }
             } else {
-                brs::Direction::ZPositive
+                (brs::Direction::ZPositive, false)
             };
-            if mw {
-                return Some(vec![BrickDesc::new(asset)
-                .size((size * 5, size * 5, height))
-                .offset(offset)
-                .rotation_offset(rotation)
-                .microwedge_rotate()
-                .direction_override(direction)])
-            }
 
             Some(vec![BrickDesc::new(asset)
                 .size((size * 5, size * 5, height))
                 .offset(offset)
                 .rotation_offset(rotation)
+                .microwedge_rotate(mw)
+                .inverted_modter_rotate(imr)
                 .direction_override(direction)])
         },
         r"(\d+)x(\d+)x?(?P<height>\d+)? Arch(?P<up> Up)?" => |captures, _| {
