@@ -174,10 +174,8 @@ pub fn convert(reader: bl_save::Reader<impl BufRead>) -> io::Result<ConvertRepor
             }
         }
     }
-
-    for brick in non_prio {
-        converter.write_data.bricks.push(brick);
-    }
+    
+    converter.write_data.bricks.append(&mut non_prio);
 
     Ok(ConvertReport {
         write_data: converter.write_data,
