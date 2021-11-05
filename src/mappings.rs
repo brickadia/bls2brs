@@ -18,6 +18,18 @@ lazy_static! {
         .color_override(brs::Color::from_rgba(51, 51, 51, 255));
     static ref BRICK_ROAD_STRIPE: BrickDesc = BrickDesc::new("PB_DefaultTile")
         .color_override(brs::Color::from_rgba(254, 254, 232, 255));
+    static ref GENERIC_DOOR: BrickMapping = vec![
+        //frame
+        BrickDesc::new("PB_DefaultMicroBrick").size((20, 5, 1)).offset((0, 0, -35)),
+        BrickDesc::new("PB_DefaultMicroBrick").size((20, 5, 1)).offset((0, 0, 35)),
+        BrickDesc::new("PB_DefaultMicroBrick").size((1, 5, 34)).offset((0, 19, 0)),
+        BrickDesc::new("PB_DefaultMicroBrick").size((1, 5, 34)).offset((0, -19, 0)),
+        //door
+        BrickDesc::new("PB_DefaultMicroBrick").size((18, 1, 34)),
+        //handle
+        BrickDesc::new("PB_DefaultMicroBrick").size((3, 1, 3)).offset((2, 12, 0)),
+        BrickDesc::new("PB_DefaultMicroBrick").size((3, 1, 3)).offset((-2, 12, 0)),
+    ];
 
     pub static ref BRICK_MAP_LITERAL: HashMap<&'static str, BrickMapping> = brick_map_literal![
         // # Correct mappings
@@ -40,6 +52,9 @@ lazy_static! {
         "Music Brick" => BrickDesc::new("PB_DefaultBrick").size((5, 5, 6)),
         "1x4x2 Fence" => BrickDesc::new("PB_DefaultBrick").size((5, 4*5, 2*6)).rotation_offset(0),
         "2x2x1 Octo Cone" => BrickDesc::new("B_2x2_Round"),
+        "Gravestone" => BrickDesc::new("B_Gravestone"),
+        "House Door" => GENERIC_DOOR.clone(),
+        "Plain Door" => GENERIC_DOOR.clone(),
 
         "2x2x2 Cone" => vec![
             BrickDesc::new("B_2x_Octo_Cone").offset((0, 0, -2)),
@@ -63,6 +78,50 @@ lazy_static! {
             BrickDesc::new("PB_DefaultBrick").size((5, 4*5, 2)).rotation_offset(0).offset((0, 0, -14*2)),
             BrickDesc::new("PB_DefaultTile").size((5, 4*5, 5*6-2)).rotation_offset(0).offset((0, 0, 2))
                 .color_override(brs::Color::from_rgba(255, 255, 255, 76)),
+        ],
+
+        "1x4x2 Bars" => vec![
+            BrickDesc::new("PB_DefaultMicroBrick").size((5, 20, 2)).offset((0, 0, -10)),
+            BrickDesc::new("PB_DefaultMicroBrick").size((5, 20, 1)).offset((0, 0, 11)),
+            BrickDesc::new("PB_DefaultPole").size((3, 3, 1)).offset((-15, 0, -7)),
+            BrickDesc::new("PB_DefaultPole").size((3, 3, 1)).offset((-5, 0, -7)),
+            BrickDesc::new("PB_DefaultPole").size((3, 3, 1)).offset((5, 0, -7)),
+            BrickDesc::new("PB_DefaultPole").size((3, 3, 1)).offset((15, 0, -7)),
+            BrickDesc::new("PB_DefaultPole").size((2, 2, 8)).offset((15, 0, 2)),
+            BrickDesc::new("PB_DefaultPole").size((2, 2, 8)).offset((5, 0, 2)),
+            BrickDesc::new("PB_DefaultPole").size((2, 2, 8)).offset((-5, 0, 2)),
+            BrickDesc::new("PB_DefaultPole").size((2, 2, 8)).offset((-15, 0, 2)),
+        ],
+
+        "Treasure Chest" => vec![
+            // Body
+            BrickDesc::new("PB_DefaultMicroBrick").size((20, 10, 2)).offset((0, 0, -8)),
+            BrickDesc::new("PB_DefaultMicroBrick").size((2, 2, 2)).offset((8, 18, -4)),
+            BrickDesc::new("PB_DefaultMicroBrick").size((2, 2, 2)).offset((8, -18, -4)),
+            BrickDesc::new("PB_DefaultMicroBrick").size((2, 2, 2)).offset((-8, 18, -4)),
+            BrickDesc::new("PB_DefaultMicroBrick").size((2, 2, 2)).offset((-8, -18, -4)),
+            BrickDesc::new("PB_DefaultMicroBrick").size((4, 2, 2)).offset((8, 0, -4)),
+            BrickDesc::new("PB_DefaultMicroBrick").size((4, 2, 2)).offset((-8, 0, -4)),
+            BrickDesc::new("PB_DefaultMicroBrick").size((19, 6, 2)).offset((0, 0, -4)),
+            BrickDesc::new("PB_DefaultMicroBrick").size((6, 1, 2)).offset((8, 10, -4)),
+            BrickDesc::new("PB_DefaultMicroBrick").size((6, 1, 2)).offset((8, -10, -4)),
+            BrickDesc::new("PB_DefaultMicroBrick").size((6, 1, 2)).offset((-8, 10, -4)),
+            BrickDesc::new("PB_DefaultMicroBrick").size((6, 1, 2)).offset((-8, -10, -4)),
+            BrickDesc::new("PB_DefaultMicroBrick").size((20, 10, 4)).offset((0, 0, 2)),
+            BrickDesc::new("PB_DefaultMicroBrick").size((20, 6, 2)).offset((0, 0, 8)),
+            BrickDesc::new("PB_DefaultMicroWedge").size((2, 20, 2)).offset((-8, 0, 8)).microwedge_rotate(true).rotation_offset(2),
+            BrickDesc::new("PB_DefaultMicroWedge").size((2, 20, 2)).offset((8, 0, 8)).microwedge_rotate(true).rotation_offset(0),
+            // Lock
+            BrickDesc::new("PB_DefaultMicroBrick").size((4, 1, 2)).offset((-11, 0, 2)).non_priority(true)
+                .color_override(brs::Color::from_rgba(255, 255, 0, 255)),
+            BrickDesc::new("PB_DefaultMicroBrick").size((2, 1, 1)).offset((-11, 0, -1)).non_priority(true)
+                .color_override(brs::Color::from_rgba(255, 255, 0, 255)),
+            BrickDesc::new("PB_DefaultMicroWedge").size((1, 1, 1)).offset((-11, 3, -1)).non_priority(true).microwedge_rotate(true)
+                .color_override(brs::Color::from_rgba(255, 255, 0, 255)).rotation_offset(3)
+                .direction_override(brs::Direction::ZNegative),
+            BrickDesc::new("PB_DefaultMicroWedge").size((1, 1, 1)).offset((-11, -3, -1)).non_priority(true).microwedge_rotate(true)
+                .color_override(brs::Color::from_rgba(255, 255, 0, 255)).rotation_offset(1)
+                .direction_override(brs::Direction::ZNegative),
         ],
 
         "32x32 Road" => vec![
