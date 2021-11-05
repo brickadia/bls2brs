@@ -81,11 +81,11 @@ pub fn convert(reader: bl_save::Reader<impl BufRead>) -> io::Result<ConvertRepor
 
         for BrickDesc {
             asset,
-            size,
+            mut size,
             offset,
             rotation_offset,
             color_override,
-            direction_override,
+            mut direction_override,
             microwedge_rotate,
             inverted_modter_rotate,
         } in mappings
@@ -114,10 +114,8 @@ pub fn convert(reader: bl_save::Reader<impl BufRead>) -> io::Result<ConvertRepor
             };
 
             // convert a vertical slope to microwedge
-            let mut direction_override = direction_override;
-            let original_dir = direction_override;
-            let mut size = size;
             if microwedge_rotate {
+                let original_dir = direction_override;
                 if rotation == 0 || rotation == 2 {
                     direction_override = Some(brs::Direction::YPositive);
                     if rotation == 0 {
