@@ -276,35 +276,38 @@ lazy_static! {
             let size: u32 = captures.get(1).unwrap().as_str().parse().ok()?;
             Some(vec![BrickDesc::new("PB_DefaultBrick").size((size * 5, size * 5, size * 5))])
         },
-        r"^(?P<size>\d+)x (?:(?P<cube>Cube)|(?P<ramp>Ramp)|(?P<cornera>CornerA)|(?P<cornerb>CornerB)|(?P<cornerc>CornerC)|(?P<cornerd>CornerD)|(?P<wedge>Wedge))(?:(?P<steep> Steep)|(?P<three_quarters> 3/4h)|(?P<half> 1/2h)|(?P<quarter> 1/4h)| )?$" => |captures, _| {
+        r"^(?P<size>\d+)x (?:(?P<cube>Cube)|(?P<ramp>Ramp)|(?P<cornera>CornerA|CorA)|(?P<cornerb>CornerB|CorB)|(?P<cornerc>CornerC|CorC)|(?P<cornerd>CornerD|CorD)|(?P<wedge>Wedge))(?:(?P<steep> Steep)|(?P<three_quarters> 3/4h)|(?P<half> 1/2h)|(?P<quarter> 1/4h)| )?(?P<inv> Inv.)?$" => |captures, _| {
             let size: u32 = captures.name("size").unwrap().as_str().parse().ok()?;
             let height = if captures.name("steep").is_some() {
-                size * 2
+                size * 2 * 5
             } else if captures.name("three_quarters").is_some() {
-                return None;
+                match size {
+                    8 => 5 * 6,
+                    _ => return None
+                }
             } else if captures.name("half").is_some() {
-                size / 2
+                size / 2 * 5
             } else if captures.name("quarter").is_some() {
-                size / 4
+                size / 4 * 5
             } else {
-                size
+                size * 5
             };
+            let mut mw = false;
             let (asset, rotation, use_offset) = if captures.name("cube").is_some() {
-                ("PB_DefaultBrick", 1, false)
+                ("PB_DefaultMicroBrick", 1, false)
             } else if captures.name("wedge").is_some() {
-                ("PB_DefaultSideWedge", 2, false)
+                ("PB_DefaultMicroWedge", 2, false)
             } else if captures.name("ramp").is_some() {
-                ("PB_DefaultWedge", 3, false)
+                mw = true;
+                ("PB_DefaultMicroWedge", 3, false)
             } else if captures.name("cornera").is_some() {
-                // TODO: Matching brick
-                return None;
+                ("PB_DefaultMicroWedgeTriangleCorner", 2, false)
             } else if captures.name("cornerb").is_some() {
-                // No matching brick, this is an approximation
-                ("PB_DefaultRampInnerCorner", 2, false)
+                ("PB_DefaultMicroWedgeOuterCorner", 2, false)
             } else if captures.name("cornerc").is_some() {
-                ("PB_DefaultRampCorner", 2, false)
+                ("PB_DefaultMicroWedgeCorner", 2, false)
             } else if captures.name("cornerd").is_some() {
-                ("PB_DefaultRampInnerCorner", 2, false)
+                ("PB_DefaultMicroWedgeInnerCorner", 2, false)
             } else {
                 unreachable!()
             };
@@ -313,10 +316,25 @@ lazy_static! {
             } else {
                 (0, 0, 0)
             };
-            Some(vec![BrickDesc::new(asset)
-                .size((size * 5, size * 5, height * 5))
+            let direction = if captures.name("inv").is_some() {
+                brs::Direction::ZNegative
+            } else {
+                brs::Direction::ZPositive
+            };
+            if mw {
+                return Some(vec![BrickDesc::new(asset)
+                .size((size * 5, size * 5, height))
                 .offset(offset)
-                .rotation_offset(rotation)])
+                .rotation_offset(rotation)
+                .microwedge_rotate()
+                .direction_override(direction)])
+            }
+
+            Some(vec![BrickDesc::new(asset)
+                .size((size * 5, size * 5, height))
+                .offset(offset)
+                .rotation_offset(rotation)
+                .direction_override(direction)])
         },
         r"(\d+)x(\d+)x?(?P<height>\d+)? Arch(?P<up> Up)?" => |captures, _| {
             let width: u32 = captures.get(1).unwrap().as_str().parse().ok()?;
