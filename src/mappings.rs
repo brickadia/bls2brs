@@ -415,5 +415,29 @@ lazy_static! {
                 .direction_override(direction)
             ])
         },
+        // 1RandomPack Panels
+        r"^(\d)h Panel (?P<corner>Corner )?(?P<length>\d)x" => |captures, _| {
+            let height: u32 = captures.get(1).unwrap().as_str().parse().ok()?;
+            let length: u32 = captures.name("length").unwrap().as_str().parse().ok()?;
+
+            if captures.name("corner").is_some() {
+                Some(vec![
+                    BrickDesc::new("PB_DefaultMicroBrick").size((length*5, 5, 2)).offset((0, 0, 2 - (height*6) as i32)),
+                    BrickDesc::new("PB_DefaultMicroBrick").size((length*5, 1, 4)).offset((-4, 0, 2)),
+                    BrickDesc::new("PB_DefaultMicroBrick").size((1, 4, 4)).offset((1, -4, 2)),
+                ])
+            } else if height == 1 {
+                Some(vec![
+                    BrickDesc::new("PB_DefaultMicroBrick").size((length*5, 5, 2)).offset((0, 0, 2 - (height*6) as i32)),
+                    BrickDesc::new("PB_DefaultMicroBrick").size((length*5, 1, 4)).offset((-4, 0, 2))
+                ])
+            } else {
+                Some(vec![
+                    BrickDesc::new("PB_DefaultMicroBrick").size((length*5, 5, 2)).offset((0, 0, 2 - (height*6) as i32)),
+                    BrickDesc::new("PB_DefaultMicroBrick").size((length*5, 1, height*6 - 4)).offset((-4, 0, 0)),
+                    BrickDesc::new("PB_DefaultMicroBrick").size((length*5, 5, 2)).offset((0, 0, (height*6) as i32 - 2))
+                ])
+            }
+        },
     ];
 }
