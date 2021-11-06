@@ -64,7 +64,7 @@ pub fn convert(reader: bl_save::Reader<impl BufRead>) -> io::Result<ConvertRepor
     let mut count_success = 0;
     let mut count_failure = 0;
 
-    let mut non_prio: Vec<brs::Brick> = Vec::new();
+    let mut non_prio = Vec::new();
 
     for from in reader {
         let from = from?;
