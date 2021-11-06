@@ -119,28 +119,22 @@ pub fn convert(reader: bl_save::Reader<impl BufRead>) -> io::Result<ConvertRepor
             // convert a vertical slope to microwedge
             if microwedge_rotate {
                 let original_dir = direction_override;
-                let (x, y, z) = (size.0, size. 1, size.2);
+                let (x, y, z) = size;
                 if rotation == 0 || rotation == 2 {
                     direction_override = Some(brs::Direction::YPositive);
                     if rotation == 0 {
-                        size.0 = z;
-                        size.1 = x;
-                        size.2 = y;
+                        size = (z, x, y);
                     } else {
-                        size.1 = z;
-                        size.2 = y;
+                        size = (x, z, y);
                         rotation = (rotation + 1) % 4;
                     }
                 } else {
                     direction_override = Some(brs::Direction::XPositive);
                     if rotation == 1 {
-                        size.1 = z;
-                        size.2 = y;
+                        size = (x, z, y);
                         rotation = (rotation + 2) % 4;
                     } else {
-                        size.0 = z;
-                        size.1 = x;
-                        size.2 = y;
+                        size = (z, x, y);
                         rotation = (rotation + 1) % 4;
                     }
                 }
