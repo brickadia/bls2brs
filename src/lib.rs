@@ -64,6 +64,8 @@ pub fn convert(reader: bl_save::Reader<impl BufRead>) -> io::Result<ConvertRepor
     let mut count_success = 0;
     let mut count_failure = 0;
 
+    let mut non_prio = Vec::new();
+
     for from in reader {
         let from = from?;
         let option = converter.map_brick(&from);
@@ -86,6 +88,7 @@ pub fn convert(reader: bl_save::Reader<impl BufRead>) -> io::Result<ConvertRepor
             rotation_offset,
             color_override,
             mut direction_override,
+            non_priority,
             microwedge_rotate,
             inverted_modter_rotate,
         } in mappings
@@ -116,29 +119,22 @@ pub fn convert(reader: bl_save::Reader<impl BufRead>) -> io::Result<ConvertRepor
             // convert a vertical slope to microwedge
             if microwedge_rotate {
                 let original_dir = direction_override;
+                let (x, y, z) = size;
                 if rotation == 0 || rotation == 2 {
                     direction_override = Some(brs::Direction::YPositive);
                     if rotation == 0 {
-                        let (x, z) = (size.0, size.2);
-                        size.0 = z;
-                        size.2 = x;
+                        size = (z, x, y);
                     } else {
-                        let (y, z) = (size.1, size.2);
-                        size.1 = z;
-                        size.2 = y;
+                        size = (x, z, y);
                         rotation = (rotation + 1) % 4;
                     }
                 } else {
                     direction_override = Some(brs::Direction::XPositive);
                     if rotation == 1 {
-                        let (y, z) = (size.1, size.2);
-                        size.1 = z;
-                        size.2 = y;
+                        size = (x, z, y);
                         rotation = (rotation + 2) % 4;
                     } else {
-                        let (x, z) = (size.0, size.2);
-                        size.0 = z;
-                        size.2 = x;
+                        size = (z, x, y);
                         rotation = (rotation + 1) % 4;
                     }
                 }
@@ -165,9 +161,15 @@ pub fn convert(reader: bl_save::Reader<impl BufRead>) -> io::Result<ConvertRepor
                 owner_index: BRICK_OWNER as u32,
             };
 
-            converter.write_data.bricks.push(brick);
+            if non_priority {
+                non_prio.push(brick);
+            } else {
+                converter.write_data.bricks.push(brick);
+            }
         }
     }
+    
+    converter.write_data.bricks.append(&mut non_prio);
 
     Ok(ConvertReport {
         write_data: converter.write_data,
