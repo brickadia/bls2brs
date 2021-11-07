@@ -45,6 +45,16 @@ lazy_static! {
         "2x2 Octo Plate" => BrickDesc::new("B_2x2F_Octo"),
         "8x8 Grill" => BrickDesc::new("B_8x8_Lattice_Plate"),
         "1x4x2 Picket" => BrickDesc::new("B_Picket_Fence"),
+        
+        // 1RandomBrickPack 45° to 25° Ramp Adapters
+        "45° 25° Adapter A" => BrickDesc::new("PB_DefaultRampInnerCorner").size((15, 10, 6)).rotation_offset(0),
+        "45° 25° Adapter B" => BrickDesc::new("PB_DefaultRampInnerCorner").size((10, 15, 6)).rotation_offset(1),
+        "45° 25° Adapter C" => BrickDesc::new("PB_DefaultRampCorner").size((15, 10, 6)).rotation_offset(0),
+        "45° 25° Adapter D" => BrickDesc::new("PB_DefaultRampCorner").size((10, 15, 6)).rotation_offset(1),
+        "-45°-25° Inv Adapter B" => BrickDesc::new("PB_DefaultRampInnerCorner").size((15, 10, 6)).rotation_offset(0).direction_override(brs::Direction::ZNegative),
+        "-45°-25° Inv Adapter A" => BrickDesc::new("PB_DefaultRampInnerCorner").size((10, 15, 6)).rotation_offset(1).direction_override(brs::Direction::ZNegative),
+        "-45° -25° Inv Adapter D" => BrickDesc::new("PB_DefaultRampCorner").size((15, 10, 6)).rotation_offset(0).direction_override(brs::Direction::ZNegative),
+        "-45° -25° Inv Adapter C" => BrickDesc::new("PB_DefaultRampCorner").size((10, 15, 6)).rotation_offset(1).direction_override(brs::Direction::ZNegative),
 
         // # Approximate mappings
 
