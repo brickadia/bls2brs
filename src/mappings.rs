@@ -4,12 +4,12 @@ use crate::types::{BrickDesc, BrickMapping};
 use lazy_static::lazy_static;
 use regex::{Captures, Regex};
 use std::collections::{HashMap, HashSet};
+use brs::Direction::*;
 
 type RegexHandler = Box<dyn Fn(Captures, &bl_save::Brick) -> Option<BrickMapping> + Sync>;
 
 lazy_static! {
-    static ref BLANK_PRINTS: HashSet<&'static str> = vec![
-        "Letters/-space",
+    static ref TILE_PRINTS: HashSet<&'static str> = vec![
         "1x2f/blank",
         "2x2f/blank",
     ].into_iter().collect();
@@ -45,16 +45,16 @@ lazy_static! {
         "2x2 Octo Plate" => BrickDesc::new("B_2x2F_Octo"),
         "8x8 Grill" => BrickDesc::new("B_8x8_Lattice_Plate"),
         "1x4x2 Picket" => BrickDesc::new("B_Picket_Fence"),
-        
+
         // 1RandomBrickPack 45° to 25° Ramp Adapters
         "45° 25° Adapter A" => BrickDesc::new("PB_DefaultRampInnerCorner").size((15, 10, 6)).rotation_offset(0),
         "45° 25° Adapter B" => BrickDesc::new("PB_DefaultRampInnerCorner").size((10, 15, 6)).rotation_offset(1),
         "45° 25° Adapter C" => BrickDesc::new("PB_DefaultRampCorner").size((15, 10, 6)).rotation_offset(0),
         "45° 25° Adapter D" => BrickDesc::new("PB_DefaultRampCorner").size((10, 15, 6)).rotation_offset(1),
-        "-45°-25° Inv Adapter B" => BrickDesc::new("PB_DefaultRampInnerCorner").size((15, 10, 6)).rotation_offset(0).direction_override(brs::Direction::ZNegative),
-        "-45°-25° Inv Adapter A" => BrickDesc::new("PB_DefaultRampInnerCorner").size((10, 15, 6)).rotation_offset(1).direction_override(brs::Direction::ZNegative),
-        "-45° -25° Inv Adapter D" => BrickDesc::new("PB_DefaultRampCorner").size((15, 10, 6)).rotation_offset(0).direction_override(brs::Direction::ZNegative),
-        "-45° -25° Inv Adapter C" => BrickDesc::new("PB_DefaultRampCorner").size((10, 15, 6)).rotation_offset(1).direction_override(brs::Direction::ZNegative),
+        "-45°-25° Inv Adapter B" => BrickDesc::new("PB_DefaultRampInnerCorner").size((15, 10, 6)).rotation_offset(0).direction_override(ZNegative),
+        "-45°-25° Inv Adapter A" => BrickDesc::new("PB_DefaultRampInnerCorner").size((10, 15, 6)).rotation_offset(1).direction_override(ZNegative),
+        "-45° -25° Inv Adapter D" => BrickDesc::new("PB_DefaultRampCorner").size((15, 10, 6)).rotation_offset(0).direction_override(ZNegative),
+        "-45° -25° Inv Adapter C" => BrickDesc::new("PB_DefaultRampCorner").size((10, 15, 6)).rotation_offset(1).direction_override(ZNegative),
 
         // # Approximate mappings
 
@@ -128,10 +128,10 @@ lazy_static! {
                 .color_override(brs::Color::from_rgba(255, 255, 0, 255)),
             BrickDesc::new("PB_DefaultMicroWedge").size((1, 1, 1)).offset((-11, 3, -1)).non_priority(true).microwedge_rotate(true)
                 .color_override(brs::Color::from_rgba(255, 255, 0, 255)).rotation_offset(3)
-                .direction_override(brs::Direction::ZNegative),
+                .direction_override(ZNegative),
             BrickDesc::new("PB_DefaultMicroWedge").size((1, 1, 1)).offset((-11, -3, -1)).non_priority(true).microwedge_rotate(true)
                 .color_override(brs::Color::from_rgba(255, 255, 0, 255)).rotation_offset(1)
-                .direction_override(brs::Direction::ZNegative),
+                .direction_override(ZNegative),
         ],
 
         "32x32 Road" => vec![
@@ -220,12 +220,15 @@ lazy_static! {
             BRICK_ROAD_LANE.clone().size((6*5, 6*5, 2)).offset((-6*5, 6*5, 0)), // inner top left
             BRICK_ROAD_LANE.clone().size((6*5, 6*5, 2)).offset((6*5, -6*5, 0)), // inner bottom right
         ],
+
+        // 1RandomBrickPack
+        "2x2f Print 90" => BrickDesc::new("PB_DefaultSmoothTile").size((10, 10, 2)).offset((3, 0, 0)).direction_override(YNegative)
     ];
 
     pub static ref BRICK_MAP_REGEX: Vec<(Regex, RegexHandler)> = brick_map_regex![
         // TODO: Consider trying to handle fractional sizes that sometimes occur
         // TODO: Remove (?: Print)? when prints exist
-        r"^(\d+)x(\d+)(?:x(\d+)|([Ff])|([Hh]))?( Print)?$" => |captures, from| {
+        r"^(\d+)x(\d+)(?:x(\d+)|([Ff])|([Hh]))?( Print)?( Ceiling)?$" => |captures, from| {
             let width: u32 = captures.get(1).unwrap().as_str().parse().ok()?;
             let length: u32 = captures.get(2).unwrap().as_str().parse().ok()?;
             let z: u32 = if captures.get(4).is_some() { // F
@@ -241,16 +244,20 @@ lazy_static! {
             };
 
             let print = captures.get(6).is_some();
-            let asset = if print && BLANK_PRINTS.contains(from.base.print.as_str()) {
+            let asset = if z == 2 && print && TILE_PRINTS.contains(from.base.print.as_str()) {
                 "PB_DefaultTile"
+            } else if z == 2 && print {
+                "PB_DefaultSmoothTile"
             } else {
                 "PB_DefaultBrick"
             };
             let rotation_offset = if print { 0 } else { 1 };
+            let dir = if captures.get(7).is_some() { ZNegative } else { ZPositive };
 
             Some(vec![BrickDesc::new(asset)
                 .size((width * 5, length * 5, z))
-                .rotation_offset(rotation_offset)])
+                .rotation_offset(rotation_offset)
+                .direction_override(dir)])
         },
 
         // TODO: Remove (?: Print)? when prints exist
@@ -386,13 +393,13 @@ lazy_static! {
             let (direction, imr) = if captures.name("inv").is_some() {
                 if captures.name("ramp").is_some() {
                     rotation += 2;
-                    (brs::Direction::ZNegative, false)
+                    (ZNegative, false)
                 } else {
                     rotation += 3;
-                    (brs::Direction::ZNegative, true)
+                    (ZNegative, true)
                 }
             } else {
-                (brs::Direction::ZPositive, false)
+                (ZPositive, false)
             };
 
             Some(vec![BrickDesc::new(asset)
@@ -415,11 +422,8 @@ lazy_static! {
                     _ => 1
                 }
             };
-            let direction = if captures.name("up").is_some() {
-                brs::Direction::ZNegative
-            } else {
-                brs::Direction::ZPositive
-            };
+            let up = captures.name("up").is_some();
+            let direction = if up { ZNegative } else { ZPositive };
             Some(vec![BrickDesc::new("PB_DefaultArch")
                 .size((width * 5, length * 5, height * 6))
                 .direction_override(direction)
@@ -464,12 +468,12 @@ lazy_static! {
                 _ => return None
             };
             let (dir, iwr) = if neg {
-                (brs::Direction::ZNegative, true)
+                (ZNegative, true)
             } else {
-                (brs::Direction::ZPositive, false)
+                (ZPositive, false)
             };
             let (dir2, iwr2) = if diag {
-                (brs::Direction::ZNegative, true)
+                (ZNegative, true)
             } else {
                 (dir, iwr)
             };
