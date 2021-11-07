@@ -439,5 +439,37 @@ lazy_static! {
                 ])
             }
         },
+        // 1RandomPack Center Ramps
+        r"^(-)?(\d+)° Center (Diag )?Ramp 1x" => |captures, _| {
+            let neg = captures.get(1).is_some();
+            let angle = captures.get(2).unwrap().as_str();
+            let diag = captures.get(3).is_some();
+            let (z, x) = match angle {
+                "18" => (6, 15),
+                "25" => (6, 10),
+                "45" => (6, 5),
+                "65" => (12, 5),
+                "72" => (18, 5),
+                "80" => (30, 5),
+                _ => return None
+            };
+            let (dir, iwr) = if neg {
+                (brs::Direction::ZNegative, true)
+            } else {
+                (brs::Direction::ZPositive, false)
+            };
+            let (dir2, iwr2) = if diag {
+                (brs::Direction::ZNegative, true)
+            } else {
+                (dir, iwr)
+            };
+            Some(vec![
+                BrickDesc::new("PB_DefaultBrick").size((5, 5, z)).direction_override(dir),
+                BrickDesc::new("PB_DefaultWedge").size((x, 5, z)).offset((-(x as i32 + 5), 0, 0))
+                    .rotation_offset(2).direction_override(dir).inverted_wedge_rotate(iwr),
+                BrickDesc::new("PB_DefaultWedge").size((x, 5, z)).offset((x as i32 + 5, 0, 0))
+                    .rotation_offset(0).direction_override(dir2).inverted_wedge_rotate(iwr2),
+            ])
+        },
     ];
 }

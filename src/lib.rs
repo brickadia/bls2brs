@@ -91,6 +91,7 @@ pub fn convert(reader: bl_save::Reader<impl BufRead>) -> io::Result<ConvertRepor
             non_priority,
             microwedge_rotate,
             inverted_modter_rotate,
+            inverted_wedge_rotate,
         } in mappings
         {
             let asset_name_index = converter.asset(asset);
@@ -143,8 +144,9 @@ pub fn convert(reader: bl_save::Reader<impl BufRead>) -> io::Result<ConvertRepor
                 }
             }
 
-            // fix odd rotation offsets on inverted ModTer
-            if inverted_modter_rotate && (rotation == 1 || rotation == 3) {
+            // fix odd rotation offsets on inverted ModTer, wedges
+            if (inverted_modter_rotate && (rotation == 1 || rotation == 3)) ||
+                (inverted_wedge_rotate && (rotation == 0 || rotation == 2)) {
                 rotation = (rotation + 2) % 4;
             }
 
