@@ -641,8 +641,8 @@ lazy_static! {
         },
 
         r"^(\d+)x(\d+)F Tile$" => |captures, _| {
-            let width: u32 = captures.get(1).unwrap().as_str().parse().ok()?;
-            let length: u32 = captures.get(2).unwrap().as_str().parse().ok()?;
+            let length: u32 = captures.get(1).unwrap().as_str().parse().ok()?;
+            let width: u32 = captures.get(2).unwrap().as_str().parse().ok()?;
             Some(vec![BrickDesc::new("PB_DefaultTile").size((width * 5, length * 5, 2))])
         },
         r"^(\d+)x(\d+) Base$" => |captures, _| {
